@@ -4,10 +4,12 @@
 FROM oven/bun:1 AS base
 WORKDIR /app
 
-# Copy workspace root files for dependency resolution
+# Copy ALL workspace package.json files for proper resolution
 FROM base AS deps
 COPY package.json bun.lock ./
+COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
+COPY packages/shared/package.json ./packages/shared/
 COPY packages/shared ./packages/shared
 
 # Install dependencies from root (workspace-aware)
