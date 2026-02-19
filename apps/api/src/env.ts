@@ -20,6 +20,9 @@ const envSchema = z.object({
   // Frontend
   FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL'),
 
+  // Server
+  PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+
   // Optional: Klap configuration
   KLAP_MAX_DURATION: z.coerce.number().int().min(10).max(120).default(30),
   KLAP_MAX_CLIP_COUNT: z.coerce.number().int().min(1).max(10).default(3),

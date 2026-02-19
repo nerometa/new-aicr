@@ -1,7 +1,21 @@
+# Backend Dockerfile for Railway
 FROM oven/bun:1 AS base
 WORKDIR /app
-COPY package.json bun.lock* ./
+
+# Install dependencies
+FROM base AS deps
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
+
+# Build and run
+FROM base AS release
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=3000
+
 EXPOSE 3000
+
 CMD ["bun", "run", "src/index.ts"]
