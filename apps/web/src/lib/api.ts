@@ -1,9 +1,14 @@
 import type { Job, Clip, JobResponse, CreateJobRequest, ExportResponse } from '@aicr/shared';
 
-const API_BASE = 'http://localhost:3000';
+export const getApiBase = (): string => {
+  if (typeof window !== 'undefined') {
+    return import.meta.env.VITE_API_URL || window.location.origin;
+  }
+  return import.meta.env.VITE_API_URL || 'http://localhost:3000';
+};
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${getApiBase()}${path}`, {
     ...options,
     credentials: 'include',
     headers: {

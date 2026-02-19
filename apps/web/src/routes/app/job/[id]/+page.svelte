@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { onMount, onDestroy } from 'svelte';
-  import { getJob, getClips, createExport, getExport } from '$lib/api';
+  import { getJob, getClips, createExport, getExport, getApiBase } from '$lib/api';
   import type { Job, Clip } from '@aicr/shared';
   
   let job = $state<Job | null>(null);
@@ -41,7 +41,8 @@
   }
   
   function subscribeToSSE() {
-    eventSource = new EventSource(`http://localhost:3000/api/sse/${jobId}`);
+    const apiBase = getApiBase();
+    eventSource = new EventSource(`${apiBase}/api/jobs/sse/${jobId}`);
     eventSource.onmessage = async (e) => {
       const data = JSON.parse(e.data);
       status = data.status;

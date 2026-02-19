@@ -6,15 +6,27 @@ import { createVideoTask, isKlapConfigured } from '../services/klap';
 import type { KlapTask } from '../services/klap';
 import { enqueueJob } from '../services/poller';
 import { randomUUID } from 'crypto';
+import { env } from '../env';
+
+const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[a-zA-Z0-9_-]{11}/;
+
+const isValidYouTubeUrl = (url: string): boolean => YOUTUBE_URL_REGEX.test(url);
 
 export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
   .post('/', async ({ body, set }) => {
-    // Check if Klap is configured
     if (!isKlapConfigured()) {
       set.status = 500;
       return { 
         error: 'Klap API not configured', 
         message: 'KLAP_API_KEY is missing. Please configure your .env file.' 
+      };
+    }
+
+    if (!isValidYouTubeUrl(body.youtubeUrl)) {
+      set.status = 400;
+      return { 
+        error: 'Invalid URL', 
+        message: 'Please provide a valid YouTube URL' 
       };
     }
     
@@ -25,7 +37,7 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       
       await db.insert(jobs).values({
         id: jobId,
-        userId: 'anonymous', // TODO: Get from auth session
+        userId: 'anonymous',
         youtubeUrl: body.youtubeUrl,
         klapTaskId: klapTask.id,
         status: 'pending',
@@ -36,13 +48,11 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       await enqueueJob(jobId);
 
       return { id: jobId, status: 'pending', youtubeUrl: body.youtubeUrl };
-    } catch (e: any) {
-      console.error('Job creation error:', e);
+    } catch (error) {
+      console.error('Job creation error:', error);
       set.status = 500;
-      return { 
-        error: 'Failed to create job', 
-        message: e.message || 'Unknown error occurred' 
-      };
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      return { error: 'Failed to create job', message };
     }
   }, {
     body: t.Object({
@@ -71,19 +81,29 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
     set.headers['Content-Type'] = 'text/event-stream';
     set.headers['Cache-Control'] = 'no-cache';
 
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
     const stream = new ReadableStream({
       async start(controller) {
         const send = (data: object) =>
           controller.enqueue(`data: ${JSON.stringify(data)}\n\n`);
 
-        const interval = setInterval(async () => {
-          const [job] = await db.select().from(jobs).where(eq(jobs.id, params.jobId));
-          send({ status: job?.status, jobId: params.jobId });
-          if (job?.status === 'done' || job?.status === 'error') {
-            clearInterval(interval);
+        intervalId = setInterval(async () => {
+          try {
+            const [job] = await db.select().from(jobs).where(eq(jobs.id, params.jobId));
+            send({ status: job?.status, jobId: params.jobId });
+            if (job?.status === 'done' || job?.status === 'error') {
+              if (intervalId) clearInterval(intervalId);
+              controller.close();
+            }
+          } catch {
+            if (intervalId) clearInterval(intervalId);
             controller.close();
           }
         }, 5000);
+      },
+      cancel() {
+        if (intervalId) clearInterval(intervalId);
       }
     });
 

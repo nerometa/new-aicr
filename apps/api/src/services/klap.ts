@@ -1,5 +1,7 @@
-const BASE = process.env.KLAP_API_URL || 'https://api.klap.video/v2';
-const KEY = process.env.KLAP_API_KEY || '';
+import { env } from '../env';
+
+const BASE = env.KLAP_API_URL;
+const KEY = env.KLAP_API_KEY;
 
 // Klap API Types
 export interface KlapTask {
@@ -71,8 +73,8 @@ export const createVideoTask = (sourceUrl: string): Promise<KlapTask> =>
   klapPost<KlapTask>('/tasks/video-to-shorts', {
     source_video_url: sourceUrl,
     language: 'en',
-    max_duration: 30,
-    max_clip_count: 3,
+    max_duration: env.KLAP_MAX_DURATION,
+    max_clip_count: env.KLAP_MAX_CLIP_COUNT,
     editing_options: { intro_title: false },
   });
 
