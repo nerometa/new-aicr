@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 
 // Only test pure functions that don't require env mocking
 // API call tests are covered by integration tests

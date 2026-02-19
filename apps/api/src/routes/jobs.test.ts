@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 
 const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[a-zA-Z0-9_-]{11}$/;
 
@@ -38,7 +38,7 @@ describe('YouTube URL validation', () => {
       expect(isValidYouTubeUrl('https://www.youtube.com/watch?v=abc-def1234')).toBe(true);
     });
 
-    it('accepts URLs with query params after video ID', () => {
+    it('rejects URLs with query params after video ID', () => {
       expect(isValidYouTubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=123s')).toBe(false);
     });
   });
