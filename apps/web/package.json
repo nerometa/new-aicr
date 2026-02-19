@@ -25,6 +25,7 @@
 	},
 	"dependencies": {
 		"@aicr/shared": "workspace:*",
+		"@sveltejs/adapter-node": "^5.5.3",
 		"better-auth": "^1.4.18"
 	}
 }

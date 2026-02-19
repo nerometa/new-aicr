@@ -1,0 +1,37 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+apps/api/dist
+apps/web/.svelte-kit
+apps/web/build
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+**/test
+**/tests
+
+# Development files
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+*.md
+.vscode
+.idea
+
+# Docker files (prevent recursive copy)
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Lock files for individual apps (we use root bun.lock)
+apps/*/bun.lock
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db
