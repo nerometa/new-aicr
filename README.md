@@ -1,10 +1,5 @@
 # AICR — AI Content Repurposer
 
-> **Scope:** College-scale project. Good enough to demo, ship, and show off.
-> **Aesthetic:** Sharp, editorial brutalist-minimal — DM Mono + Barlow Condensed, near-black/off-white/acid-yellow accent.
-
----
-
 ## Quick Start
 
 ```bash
