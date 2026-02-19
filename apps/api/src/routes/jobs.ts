@@ -8,7 +8,7 @@ import { enqueueJob } from '../services/poller';
 import { randomUUID } from 'crypto';
 import { env } from '../env';
 
-const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[a-zA-Z0-9_-]{11}/;
+const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[a-zA-Z0-9_-]{11}$/;
 
 const isValidYouTubeUrl = (url: string): boolean => YOUTUBE_URL_REGEX.test(url);
 
