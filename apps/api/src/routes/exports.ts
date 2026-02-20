@@ -3,27 +3,34 @@ import { db } from '../db/client';
 import { clips } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { createExport, getExport } from '../services/klap';
-import type { KlapExport } from '../services/klap';
-import { randomUUID } from 'crypto';
+
+// Helper to get clip with folder ID (eliminates duplication)
+const getClipWithFolder = async (clipId: string) => {
+  const [clip] = await db.select().from(clips).where(eq(clips.id, clipId));
+  return clip?.klapFolderId ? { clip, folderId: clip.klapFolderId } : null;
+};
 
 export const exportsRoute = new Elysia({ prefix: '/api/exports' })
-  .post('/:clipId', async ({ params }) => {
-    const [clip] = await db.select().from(clips).where(eq(clips.id, params.clipId));
-    if (!clip?.klapFolderId) return { error: 'Clip not found' };
+  .post('/:clipId', async ({ params, set }) => {
+    const result = await getClipWithFolder(params.clipId);
+    if (!result) {
+      set.status = 404;
+      return { error: 'Clip not found' };
+    }
 
-    const exportResult: KlapExport = await createExport(clip.klapFolderId, params.clipId);
-    
-    await db.update(clips)
-      .set({ exportStatus: 'processing' })
-      .where(eq(clips.id, params.clipId));
+    const exportResult = await createExport(result.folderId, params.clipId);
+    await db.update(clips).set({ exportStatus: 'processing' }).where(eq(clips.id, params.clipId));
 
     return { exportId: exportResult.id, status: 'processing' };
   })
-  .get('/:clipId/:exportId', async ({ params }) => {
-    const [clip] = await db.select().from(clips).where(eq(clips.id, params.clipId));
-    if (!clip?.klapFolderId) return { error: 'Clip not found' };
+  .get('/:clipId/:exportId', async ({ params, set }) => {
+    const result = await getClipWithFolder(params.clipId);
+    if (!result) {
+      set.status = 404;
+      return { error: 'Clip not found' };
+    }
 
-    const exportResult: KlapExport = await getExport(clip.klapFolderId, params.clipId, params.exportId);
+    const exportResult = await getExport(result.folderId, params.clipId, params.exportId);
 
     if (exportResult.status === 'done' && exportResult.src_url) {
       await db.update(clips)
