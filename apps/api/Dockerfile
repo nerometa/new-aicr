@@ -10,6 +10,9 @@ WORKDIR /app
 # Build arguments
 ARG API_PORT=3000
 
+# Install curl for healthcheck
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Copy ALL workspace package.json files for proper resolution
 FROM base AS deps
 COPY package.json bun.lock ./
