@@ -27,10 +27,6 @@
   <form onsubmit={handleSubmit} class="w-full max-w-md border border-[#2a2a2a] p-8">
     <h1 class="font-['Barlow_Condensed'] text-4xl font-black mb-8">REGISTER</h1>
     
-    {#if error}
-      <p class="text-red-400 text-xs mb-4">{error}</p>
-    {/if}
-    
     <div class="space-y-4 mb-6">
       <input
         type="text"
