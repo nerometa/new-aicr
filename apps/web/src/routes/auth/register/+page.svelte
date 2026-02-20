@@ -1,23 +1,22 @@
 <script lang="ts">
   import { signUp } from '$lib/auth-client';
-  import { goto } from '$app/navigation';
+  import { toast } from '$lib/toast';
   
   let name = $state('');
   let email = $state('');
   let password = $state('');
   let loading = $state(false);
-  let error = $state('');
   
   async function handleSubmit(e: Event) {
     e.preventDefault();
     if (!email || !password || !name) return;
     loading = true;
-    error = '';
     try {
       await signUp.email({ email, password, name });
-      goto('/app');
+      toast.success('Account created!');
+      window.location.href = '/app';
     } catch (e: any) {
-      error = e.message || 'Registration failed';
+      toast.error(e.message || 'Registration failed');
     } finally {
       loading = false;
     }

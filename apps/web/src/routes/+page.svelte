@@ -1,20 +1,19 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
   import { createJob } from '$lib/api';
+  import { toast } from '$lib/toast';
   
   let url = $state('');
   let loading = $state(false);
-  let error = $state('');
   
   async function submit() {
     if (!url) return;
     loading = true;
-    error = '';
     try {
       const job = await createJob(url);
-      goto(`/app/job/${job.id}`);
+      window.location.href = `/app/job/${job.id}`;
     } catch (e) {
-      error = 'Failed to start. Check your URL.';
+      const message = e instanceof Error ? e.message : 'Failed to start. Check your URL.';
+      toast.error(message);
     } finally {
       loading = false;
     }
@@ -45,5 +44,4 @@
       {loading ? 'PROCESSING...' : 'GENERATE'}
     </button>
   </div>
-  {#if error}<p class="text-red-400 text-xs mt-2">{error}</p>{/if}
 </section>

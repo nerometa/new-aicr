@@ -1,22 +1,21 @@
 <script lang="ts">
   import { signIn } from '$lib/auth-client';
-  import { goto } from '$app/navigation';
+  import { toast } from '$lib/toast';
   
   let email = $state('');
   let password = $state('');
   let loading = $state(false);
-  let error = $state('');
   
   async function handleSubmit(e: Event) {
     e.preventDefault();
     if (!email || !password) return;
     loading = true;
-    error = '';
     try {
       await signIn.email({ email, password });
-      goto('/app');
+      toast.success('Login successful!');
+      window.location.href = '/app';
     } catch (e: any) {
-      error = e.message || 'Login failed';
+      toast.error(e.message || 'Login failed');
     } finally {
       loading = false;
     }

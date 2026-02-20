@@ -31,22 +31,35 @@ async function klapRequest<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error('KLAP_API_KEY is not configured. Please add it to your .env file.');
   }
 
-  const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    headers: {
-      'Authorization': `Bearer ${KEY}`,
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
+  const url = `${BASE}${path}`;
+  console.log(`[Klap] ${options?.method || 'GET'} ${url}`);
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error(`Klap API Error [${path}]:`, res.status, errorText);
-    throw new Error(`Klap API error: ${res.status} - ${errorText}`);
+  try {
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${KEY}`,
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`[Klap] Error ${res.status}:`, errorText);
+      throw new Error(`Klap API error: ${res.status} - ${errorText}`);
+    }
+
+    return res.json() as Promise<T>;
+  } catch (error) {
+    // Provide more helpful error message for network issues
+    if (error instanceof TypeError && (error as Error).message.includes('FailedToOpenSocket')) {
+      console.error(`[Klap] Network error - cannot reach ${url}`);
+      console.error('[Klap] This may be a DNS or firewall issue in Docker');
+      throw new Error(`Cannot reach Klap API at ${url}. Check DNS resolution and network access.`);
+    }
+    throw error;
   }
-
-  return res.json() as Promise<T>;
 }
 
 export const klapGet = <T>(path: string): Promise<T> => klapRequest<T>(path);
