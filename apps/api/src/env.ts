@@ -17,7 +17,7 @@ const envSchema = z.object({
   // Klap API (Video-to-shorts service)
   // ============================================
   KLAP_API_KEY: z.string().min(1, 'KLAP_API_KEY is required'),
-  KLAP_API_URL: z.string().url().default('https://api.klap.video/v2'),
+  KLAP_API_URL: z.string().url().default('https://api.klap.app/v2'),
   KLAP_MAX_DURATION: z.coerce.number().int().min(10).max(120).default(30),
   KLAP_MAX_CLIP_COUNT: z.coerce.number().int().min(1).max(10).default(3),
 
