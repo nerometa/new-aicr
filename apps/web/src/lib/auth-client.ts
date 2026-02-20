@@ -6,16 +6,8 @@
  * - Must match the backend's BETTER_AUTH_URL
  */
 import { createAuthClient } from 'better-auth/svelte';
+import { API_BASE } from './api';
 
-const getAuthUrl = (): string => {
-  if (typeof window !== 'undefined') {
-    return import.meta.env.VITE_API_URL || window.location.origin;
-  }
-  return import.meta.env.VITE_API_URL || 'http://localhost:3000';
-};
-
-export const authClient = createAuthClient({
-  baseURL: getAuthUrl()
-});
+export const authClient = createAuthClient({ baseURL: API_BASE });
 
 export const { signIn, signUp, signOut, useSession } = authClient;
