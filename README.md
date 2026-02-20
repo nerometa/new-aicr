@@ -34,7 +34,7 @@ cd ../.. && bun run dev
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis URL | Yes |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis token | Yes |
 | `KLAP_API_KEY` | Klap API key | Yes |
-| `KLAP_API_URL` | Klap API base URL | No (default: `https://api.klap.video/v2`) |
+| `KLAP_API_URL` | Klap API base URL | No (default: `https://api.klap.app/v2`) |
 | `BETTER_AUTH_SECRET` | Auth secret (32+ chars) | Yes |
 | `BETTER_AUTH_URL` | Backend public URL (e.g., `https://api.aicr.example.com`) | Yes |
 | `CORS_ORIGIN` | Frontend URL allowed to make requests (e.g., `https://aicr.example.com`) | Yes |

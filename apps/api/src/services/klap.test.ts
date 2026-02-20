@@ -42,24 +42,24 @@ describe('klap service - pure functions', () => {
 
   describe('API URL building', () => {
     it('constructs correct task URL', () => {
-      const baseUrl = 'https://api.klap.video/v2';
+      const baseUrl = 'https://api.klap.app/v2';
       const taskId = 'task-123';
-      expect(`${baseUrl}/tasks/${taskId}`).toBe('https://api.klap.video/v2/tasks/task-123');
+      expect(`${baseUrl}/tasks/${taskId}`).toBe('https://api.klap.app/v2/tasks/task-123');
     });
 
     it('constructs correct projects URL', () => {
-      const baseUrl = 'https://api.klap.video/v2';
+      const baseUrl = 'https://api.klap.app/v2';
       const folderId = 'folder-456';
-      expect(`${baseUrl}/projects/${folderId}`).toBe('https://api.klap.video/v2/projects/folder-456');
+      expect(`${baseUrl}/projects/${folderId}`).toBe('https://api.klap.app/v2/projects/folder-456');
     });
 
     it('constructs correct export URL', () => {
-      const baseUrl = 'https://api.klap.video/v2';
+      const baseUrl = 'https://api.klap.app/v2';
       const folderId = 'folder-456';
       const projectId = 'project-789';
       const exportId = 'export-012';
       expect(`${baseUrl}/projects/${folderId}/${projectId}/exports/${exportId}`).toBe(
-        'https://api.klap.video/v2/projects/folder-456/project-789/exports/export-012'
+        'https://api.klap.app/v2/projects/folder-456/project-789/exports/export-012'
       );
     });
   });
