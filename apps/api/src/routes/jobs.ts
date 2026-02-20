@@ -63,31 +63,53 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
   .get('/sse/:jobId', ({ params, set, signal }) => {
     set.headers['Content-Type'] = 'text/event-stream';
     set.headers['Cache-Control'] = 'no-cache';
+    set.headers['Connection'] = 'keep-alive';
+
+    let closed = false;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const safeClose = () => {
+      if (closed) return;
+      closed = true;
+      if (intervalId) clearInterval(intervalId);
+      try {
+        // Controller might already be closed by client disconnect
+      } catch {
+        // Ignore - controller already closed
+      }
+    };
 
     const stream = new ReadableStream({
       async start(controller) {
-        const send = (data: object) => controller.enqueue(`data: ${JSON.stringify(data)}\n\n`);
+        const send = (data: object) => {
+          if (closed) return;
+          try {
+            controller.enqueue(`data: ${JSON.stringify(data)}\n\n`);
+          } catch {
+            safeClose();
+          }
+        };
 
-        const intervalId = setInterval(async () => {
+        intervalId = setInterval(async () => {
+          if (closed) {
+            if (intervalId) clearInterval(intervalId);
+            return;
+          }
+          
           try {
             const [job] = await db.select().from(jobs).where(eq(jobs.id, params.jobId));
             send({ status: job?.status, jobId: params.jobId });
             // Klap uses "ready" not "done"
             if (job?.status === 'ready' || job?.status === 'error') {
-              clearInterval(intervalId);
-              controller.close();
+              safeClose();
             }
           } catch {
-            clearInterval(intervalId);
-            controller.close();
+            safeClose();
           }
         }, 5000);
 
         // Cleanup on abort (client disconnect)
-        signal?.addEventListener('abort', () => {
-          clearInterval(intervalId);
-          controller.close();
-        });
+        signal?.addEventListener('abort', safeClose);
       },
     });
 
