@@ -36,6 +36,8 @@ ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 ENV NODE_ENV=production
 
+# Generate .svelte-kit/tsconfig.json to avoid warning
+RUN bun run prepare
 RUN bun run build
 
 # Runtime with Node for SvelteKit adapter-node
