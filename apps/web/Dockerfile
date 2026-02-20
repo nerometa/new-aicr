@@ -1,8 +1,15 @@
-# Frontend Dockerfile for static build
+# Frontend Dockerfile
 # Builds from monorepo root to access bun.lock
+#
+# Configurable via build args:
+#   VITE_API_URL - Backend API URL (required, e.g., https://api.aicr.example.com)
+#   WEB_PORT - Port the server listens on (default: 3000)
 
 FROM oven/bun:1 AS base
 WORKDIR /app
+
+# Build arguments
+ARG WEB_PORT=3000
 
 # Copy ALL workspace package.json files for proper resolution
 FROM base AS deps
@@ -37,10 +44,11 @@ WORKDIR /app
 COPY --from=build /app/apps/web/build ./build
 COPY --from=build /app/apps/web/package.json ./
 
+ARG WEB_PORT
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
-ENV PORT=3000
+ENV PORT=${WEB_PORT}
 
-EXPOSE 3000
+EXPOSE ${WEB_PORT}
 
 CMD ["node", "build"]

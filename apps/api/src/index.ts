@@ -9,7 +9,7 @@ import { startPoller } from './services/poller';
 import { env } from './env';
 
 const app = new Elysia()
-  .use(cors({ origin: env.FRONTEND_URL }))
+  .use(cors({ origin: env.CORS_ORIGIN }))
   .use(swagger({ path: '/docs' }))
   .get('/api/health', () => ({ status: 'ok', timestamp: new Date().toISOString() }))
   .all('/api/auth/*', ({ request }) => auth.handler(request))

@@ -36,15 +36,28 @@ cd ../.. && bun run dev
 | `KLAP_API_KEY` | Klap API key | Yes |
 | `KLAP_API_URL` | Klap API base URL | No (default: `https://api.klap.video/v2`) |
 | `BETTER_AUTH_SECRET` | Auth secret (32+ chars) | Yes |
-| `BETTER_AUTH_URL` | Backend public URL | Yes |
-| `FRONTEND_URL` | Frontend public URL | Yes |
+| `BETTER_AUTH_URL` | Backend public URL (e.g., `https://api.aicr.example.com`) | Yes |
+| `CORS_ORIGIN` | Frontend URL allowed to make requests (e.g., `https://aicr.example.com`) | Yes |
 | `PORT` | Server port | No (default: 3000) |
 
 ### Frontend (`apps/web/.env`)
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `VITE_API_URL` | Backend API URL | Yes |
+| `VITE_API_URL` | Backend API URL (e.g., `https://api.aicr.example.com`) | Yes |
+| `WEB_PORT` | Server port (Docker only) | No (default: 3000) |
+
+### Quick Reference
+
+```
+CORS_ORIGIN  = URL of your frontend (backend needs this for CORS)
+VITE_API_URL = URL of your backend (frontend needs this to make API calls)
+BETTER_AUTH_URL = Public URL of your backend (for auth callbacks)
+```
+
+All three typically point to the same pattern:
+- Frontend: `https://aicr.example.com` → `CORS_ORIGIN`
+- Backend: `https://api.aicr.example.com` → `VITE_API_URL` + `BETTER_AUTH_URL`
 
 ---
 

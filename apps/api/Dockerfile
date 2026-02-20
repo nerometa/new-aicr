@@ -1,8 +1,14 @@
-# Backend Dockerfile for Railway
+# Backend Dockerfile
 # Builds from monorepo root to access bun.lock
+#
+# Configurable via build args:
+#   API_PORT - Port the server listens on (default: 3000)
 
 FROM oven/bun:1 AS base
 WORKDIR /app
+
+# Build arguments
+ARG API_PORT=3000
 
 # Copy ALL workspace package.json files for proper resolution
 FROM base AS deps
@@ -24,10 +30,11 @@ COPY packages/shared ./packages/shared
 
 WORKDIR /app/apps/api
 
+ARG API_PORT
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
-ENV PORT=3000
+ENV PORT=${API_PORT}
 
-EXPOSE 3000
+EXPOSE ${API_PORT}
 
 CMD ["bun", "run", "src/index.ts"]

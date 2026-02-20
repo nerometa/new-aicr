@@ -1,3 +1,11 @@
+/**
+ * API Client for AICR Backend
+ * 
+ * VITE_API_URL: The public URL of the backend API server.
+ * - Used by frontend to make API requests
+ * - Example: https://api.aicr.example.com or http://localhost:3000
+ * - Must be set at build time (baked into the bundle)
+ */
 import type { Job, Clip, JobResponse, CreateJobRequest, ExportResponse } from '@aicr/shared';
 
 export const getApiBase = (): string => {
