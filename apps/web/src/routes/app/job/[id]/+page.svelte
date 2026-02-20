@@ -24,7 +24,8 @@
     try {
       job = await getJob(jobId);
       status = job?.status || 'pending';
-      if (status === 'done') await loadClips();
+      // Klap uses "ready" not "done"
+      if (status === 'ready') await loadClips();
     } catch (e) {
       console.error('Failed to load job', e);
     }
@@ -45,9 +46,10 @@
     eventSource.onmessage = async (e) => {
       const data = JSON.parse(e.data);
       status = data.status;
-      if (status === 'done' || status === 'error') {
+      // Klap uses "ready" not "done"
+      if (status === 'ready' || status === 'error') {
         eventSource?.close();
-        if (status === 'done') await loadClips();
+        if (status === 'ready') await loadClips();
       }
     };
     eventSource.onerror = () => eventSource?.close();
@@ -63,9 +65,10 @@
       const poll = setInterval(async () => {
         try {
           const result = await getExport(clip.id, exportId);
-          if (result.status === 'done' && result.exportUrl) {
+          // Export status: "ready" not "done"
+          if (result.status === 'ready' && result.exportUrl) {
             clip.exportUrl = result.exportUrl;
-            clip.exportStatus = 'done';
+            clip.exportStatus = 'ready';
             clips = [...clips];
             clearInterval(poll);
           } else if (result.status === 'error') {
@@ -142,7 +145,7 @@
         </div>
       {/each}
     </div>
-  {:else if status === 'done'}
+  {:else if status === 'ready'}
     <div class="border border-dashed border-[#2a2a2a] p-8 text-center">
       <p class="text-[#888] text-sm">No clips were generated</p>
     </div>

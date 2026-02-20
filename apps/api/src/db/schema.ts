@@ -55,8 +55,10 @@ export const verification = sqliteTable('verification', {
 // Application Tables
 // ============================================
 
+// Job status: pending (local) -> processing (Klap) -> ready/error (Klap)
 export const jobs = sqliteTable('jobs', {
   id: text('id').primaryKey(),
+  // userId is nullable - allows anonymous job creation
   userId: text('user_id').references(() => user.id),
   youtubeUrl: text('youtube_url').notNull(),
   klapTaskId: text('klap_task_id'),
@@ -73,6 +75,7 @@ export const clips = sqliteTable('clips', {
   klapFolderId: text('klap_folder_id').notNull(),
   name: text('name'),
   viralityScore: real('virality_score'),
+  viralityScoreExplanation: text('virality_score_explanation'),
   previewUrl: text('preview_url'),
   exportStatus: text('export_status'),
   exportUrl: text('export_url'),

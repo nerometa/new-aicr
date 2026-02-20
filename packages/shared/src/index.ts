@@ -1,11 +1,12 @@
 // Shared types for AICR
+// Status values match Klap API: "processing" | "ready" | "error"
 
-export type JobStatus = 'pending' | 'processing' | 'done' | 'error';
-export type ExportStatus = 'pending' | 'processing' | 'done' | 'error';
+export type JobStatus = 'pending' | 'processing' | 'ready' | 'error';
+export type ExportStatus = 'pending' | 'processing' | 'ready' | 'error';
 
 export interface Job {
   id: string;
-  userId: string;
+  userId: string | null; // null for anonymous jobs
   youtubeUrl: string;
   klapTaskId: string | null;
   klapFolderId: string | null;
@@ -21,6 +22,7 @@ export interface Clip {
   klapFolderId: string;
   name: string | null;
   viralityScore: number | null;
+  viralityScoreExplanation: string | null;
   previewUrl: string | null;
   exportStatus: ExportStatus | null;
   exportUrl: string | null;

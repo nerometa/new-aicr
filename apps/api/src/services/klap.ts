@@ -3,24 +3,41 @@ import { env } from '../env';
 const BASE = env.KLAP_API_URL;
 const KEY = env.KLAP_API_KEY;
 
-// Klap API Types
+// Klap API Types - based on https://docs.klap.app/object-formats
+// Task status: "processing" | "ready" | "error"
+// Export status: "processing" | "ready" | "error"
+
 export interface KlapTask {
   id: string;
-  status: 'pending' | 'processing' | 'done' | 'error';
+  type: 'video-to-shorts' | 'video-to-video';
+  status: 'processing' | 'ready' | 'error';
+  created_at: string;
+  output_type: 'project' | 'folder';
   output_id?: string;
   error?: string;
 }
 
 export interface KlapProject {
   id: string;
+  author_id: string;
+  folder_id: string;
   name: string;
+  created_at: string;
   virality_score: number;
+  virality_score_explanation: string;
 }
 
 export interface KlapExport {
   id: string;
-  status: 'pending' | 'processing' | 'done' | 'error';
-  src_url?: string;
+  status: 'processing' | 'ready' | 'error';
+  src_url: string | null;
+  project_id: string;
+  created_at: string;
+  finished_at: string | null;
+  name: string;
+  author_id: string;
+  folder_id: string;
+  descriptions: string;
 }
 
 export const isKlapConfigured = (): boolean => !!KEY && KEY.length > 0;

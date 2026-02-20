@@ -8,6 +8,9 @@ import { randomUUID } from 'crypto';
 
 const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[a-zA-Z0-9_-]{11}$/;
 
+// Job status values: pending -> processing -> ready | error
+// "ready" is Klap's term (not "done")
+
 export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
   .post('/', async ({ body, set }) => {
     if (!isKlapConfigured()) {
@@ -27,7 +30,7 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       
       await db.insert(jobs).values({
         id: jobId,
-        userId: 'anonymous',
+        userId: null, // Anonymous jobs - no FK constraint
         youtubeUrl: body.youtubeUrl,
         klapTaskId: klapTask.id,
         status: 'pending',
@@ -69,7 +72,8 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
           try {
             const [job] = await db.select().from(jobs).where(eq(jobs.id, params.jobId));
             send({ status: job?.status, jobId: params.jobId });
-            if (job?.status === 'done' || job?.status === 'error') {
+            // Klap uses "ready" not "done"
+            if (job?.status === 'ready' || job?.status === 'error') {
               clearInterval(intervalId);
               controller.close();
             }

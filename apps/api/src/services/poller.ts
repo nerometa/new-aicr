@@ -28,6 +28,7 @@ const pollJob = async (jobId: string) => {
 
     const task: KlapTask = await getTask(job.klapTaskId);
 
+    // Klap status: "processing" | "ready" | "error"
     if (task.status === 'processing') return;
 
     if (task.status === 'error') {
@@ -39,17 +40,19 @@ const pollJob = async (jobId: string) => {
       return;
     }
 
+    // task.status === 'ready'
     const folderId = task.output_id;
     if (!folderId) {
-      console.error(`pollJob: No folderId for completed job ${jobId}`);
+      console.error(`pollJob: No folderId for ready job ${jobId}`);
       await redis.srem(QUEUE_KEY, jobId);
       return;
     }
     
     const projects: KlapProject[] = await getProjects(folderId);
 
+    // Use 'ready' to match Klap API terminology
     await db.update(jobs).set({ 
-      status: 'done', 
+      status: 'ready', 
       klapFolderId: folderId, 
       updatedAt: new Date() 
     }).where(eq(jobs.id, jobId));
@@ -61,6 +64,7 @@ const pollJob = async (jobId: string) => {
         klapFolderId: folderId,
         name: p.name,
         viralityScore: p.virality_score,
+        viralityScoreExplanation: p.virality_score_explanation,
         previewUrl: previewUrl(p.id),
         createdAt: new Date(),
       }).onConflictDoNothing();
