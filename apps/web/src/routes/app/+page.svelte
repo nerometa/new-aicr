@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
   import { getJobs } from '$lib/api';
   import type { Job } from '@aicr/shared';
   
@@ -17,11 +16,12 @@
     }
   });
   
+  // Klap uses 'ready' not 'done'
   function statusColor(status: string) {
     switch (status) {
       case 'pending': return 'text-[#888]';
       case 'processing': return 'text-[#d4ff00]';
-      case 'done': return 'text-[#4ade80]';
+      case 'ready': return 'text-[#4ade80]';
       case 'error': return 'text-[#f87171]';
       default: return 'text-[#888]';
     }
@@ -43,13 +43,13 @@
       {#each jobs as job}
         <a
           href="/app/job/{job.id}"
-          class="border border-[#2a2a2a] p-4 hover:border-[#d4ff00] transition-colors flex justify-between items-center"
+          class="border border-[#2a2a2a] p-4 hover:border-[#d4ff00] transition-colors flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2"
         >
-          <div>
-            <p class="text-sm mb-1 truncate max-w-md">{job.youtubeUrl}</p>
-            <p class="text-xs text-[#888]">{new Date(job.createdAt).toLocaleDateString()}</p>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm mb-1 break-all">{job.youtubeUrl}</p>
+            <p class="text-xs text-[#888]">{job.createdAt ? new Date(job.createdAt).toLocaleDateString() : ''}</p>
           </div>
-          <span class="text-xs font-bold uppercase {statusColor(job.status)}">{job.status}</span>
+          <span class="text-xs font-bold uppercase {statusColor(job.status)} shrink-0">{job.status}</span>
         </a>
       {/each}
     </div>

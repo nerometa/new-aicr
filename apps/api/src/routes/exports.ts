@@ -32,11 +32,12 @@ export const exportsRoute = new Elysia({ prefix: '/api/exports' })
 
     const exportResult = await getExport(result.folderId, params.clipId, params.exportId);
 
-    if (exportResult.status === 'done' && exportResult.src_url) {
+    // Klap uses 'ready' not 'done' for completed exports
+    if (exportResult.status === 'ready' && exportResult.src_url) {
       await db.update(clips)
-        .set({ exportStatus: 'done', exportUrl: exportResult.src_url })
+        .set({ exportStatus: 'ready', exportUrl: exportResult.src_url })
         .where(eq(clips.id, params.clipId));
-      return { status: 'done', exportUrl: exportResult.src_url };
+      return { status: 'ready', exportUrl: exportResult.src_url };
     }
 
     return { status: exportResult.status || 'processing' };
