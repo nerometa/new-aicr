@@ -21,17 +21,17 @@
   }
 </script>
 
-<div class="flex flex-col sm:flex-row gap-2 max-w-2xl w-full p-2 bg-[var(--bg)] rounded-2xl border border-[var(--border)] shadow-sm">
+<div class="flex flex-col sm:flex-row gap-2 sm:gap-2 max-w-2xl w-full p-2 sm:p-2 bg-[var(--bg)] rounded-2xl border border-[var(--border)] shadow-sm">
   <input
     bind:value={url}
     type="url"
     placeholder="https://youtube.com/watch?v=..."
-    class="flex-1 bg-transparent px-4 py-3 text-sm text-[var(--fg)] focus:outline-none transition-colors"
+    class="flex-1 bg-transparent px-3 sm:px-4 py-2 sm:py-3 text-sm text-[var(--fg)] focus:outline-none transition-colors"
   />
   <button
     onclick={submit}
     disabled={loading || !url}
-    class="bg-[var(--accent)] text-white px-8 py-3 font-semibold text-sm tracking-wider hover:opacity-90 transition-opacity disabled:opacity-40 rounded-xl"
+    class="bg-[var(--accent)] text-white px-4 sm:px-8 py-2 sm:py-3 font-semibold text-xs sm:text-sm tracking-wider hover:opacity-90 transition-opacity disabled:opacity-40 rounded-xl w-full sm:w-auto"
   >
     {loading ? 'PROCESSING...' : 'GENERATE'}
   </button>
