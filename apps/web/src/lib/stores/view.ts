@@ -1,3 +1,5 @@
+import { writable, get } from 'svelte/store';
+
 export type ViewState = 'landing' | 'job' | 'jobs-list';
 
 interface ViewStore {
@@ -6,14 +8,16 @@ interface ViewStore {
   jobsListVisible: boolean;
 }
 
-let state = $state<ViewStore>({
+const initialState: ViewStore = {
   current: 'landing',
   showAuthModal: false,
   jobsListVisible: true,
-});
+};
+
+const state = writable<ViewStore>(initialState);
 
 function navigate(view: ViewState, jobId?: string) {
-  state.current = view;
+  state.update(s => ({ ...s, current: view }));
   
   let url = '/';
   if (view === 'job' && jobId) {
@@ -26,11 +30,11 @@ function navigate(view: ViewState, jobId?: string) {
 }
 
 function openAuthModal() {
-  state.showAuthModal = true;
+  state.update(s => ({ ...s, showAuthModal: true }));
 }
 
 function closeAuthModal() {
-  state.showAuthModal = false;
+  state.update(s => ({ ...s, showAuthModal: false }));
 }
 
 function toLanding() {
@@ -46,18 +50,19 @@ function toJobsList() {
 }
 
 function toggleJobsList() {
-  state.jobsListVisible = !state.jobsListVisible;
+  state.update(s => ({ ...s, jobsListVisible: !s.jobsListVisible }));
 }
 
 export const viewStore = {
+  subscribe: state.subscribe,
   get current() {
-    return state.current;
+    return get(state).current;
   },
   get showAuthModal() {
-    return state.showAuthModal;
+    return get(state).showAuthModal;
   },
   get jobsListVisible() {
-    return state.jobsListVisible;
+    return get(state).jobsListVisible;
   },
   navigate,
   openAuthModal,

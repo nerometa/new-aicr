@@ -1,3 +1,4 @@
+import { writable, get } from 'svelte/store';
 import type { Job, Clip, JobStatus } from '@aicr/shared';
 import { getJob, getClips, createExport, getExport, API_BASE } from '$lib/api';
 
@@ -9,34 +10,35 @@ interface JobStore {
   eventSource: EventSource | null;
 }
 
-let state = $state<JobStore>({
+const initialState: JobStore = {
   job: null,
   clips: [],
   status: 'pending',
   error: null,
   eventSource: null,
-});
+};
+
+const state = writable<JobStore>(initialState);
 
 async function loadJob(jobId: string) {
   try {
     const job = await getJob(jobId);
-    state.job = job;
-    state.status = job.status;
+    state.update(s => ({ ...s, job, status: job.status }));
     
-    if (state.status === 'ready') {
+    if (job.status === 'ready') {
       await loadClips(jobId);
     }
   } catch (error) {
     console.error('Failed to load job:', error);
-    state.status = 'error';
-    state.error = (error as Error).message;
+    state.update(s => ({ ...s, status: 'error', error: (error as Error).message }));
   }
 }
 
 async function loadClips(jobId: string) {
   try {
     const clips = await getClips(jobId);
-    state.clips = clips.sort((a, b) => (b.viralityScore || 0) - (a.viralityScore || 0));
+    const sorted = clips.sort((a, b) => (b.viralityScore || 0) - (a.viralityScore || 0));
+    state.update(s => ({ ...s, clips: sorted }));
   } catch (error) {
     console.error('Failed to load clips:', error);
   }
@@ -46,16 +48,18 @@ function subscribeToSSE(jobId: string) {
   disconnect();
   
   const eventSource = new EventSource(`${API_BASE}/api/jobs/sse/${jobId}`);
-  state.eventSource = eventSource;
+  state.update(s => ({ ...s, eventSource }));
   
   eventSource.onmessage = async (event) => {
     const data = JSON.parse(event.data);
-    state.status = data.status;
+    const newStatus = data.status;
     
-    if (state.status === 'ready' || state.status === 'error') {
+    state.update(s => ({ ...s, status: newStatus }));
+    
+    if (newStatus === 'ready' || newStatus === 'error') {
       disconnect();
       
-      if (state.status === 'ready') {
+      if (newStatus === 'ready') {
         await loadClips(jobId);
       }
     }
@@ -68,9 +72,10 @@ function subscribeToSSE(jobId: string) {
 }
 
 function disconnect() {
-  if (state.eventSource) {
-    state.eventSource.close();
-    state.eventSource = null;
+  const current = get(state);
+  if (current.eventSource) {
+    current.eventSource.close();
+    state.update(s => ({ ...s, eventSource: null }));
   }
 }
 
@@ -80,10 +85,15 @@ async function initializeJob(jobId: string) {
 }
 
 function updateClip(clipId: string, updates: Partial<Clip>) {
-  const clipIndex = state.clips.findIndex(c => c.id === clipId);
-  if (clipIndex !== -1) {
-    state.clips[clipIndex] = { ...state.clips[clipIndex], ...updates };
-  }
+  state.update(s => {
+    const clipIndex = s.clips.findIndex(c => c.id === clipId);
+    if (clipIndex !== -1) {
+      const newClips = [...s.clips];
+      newClips[clipIndex] = { ...newClips[clipIndex], ...updates };
+      return { ...s, clips: newClips };
+    }
+    return s;
+  });
 }
 
 async function exportClip(clipId: string) {
@@ -115,26 +125,25 @@ async function exportClip(clipId: string) {
 
 function clear() {
   disconnect();
-  state.job = null;
-  state.clips = [];
-  state.status = 'pending';
+  state.set(initialState);
 }
 
 export const jobStore = {
+  subscribe: state.subscribe,
   get job() {
-    return state.job;
+    return get(state).job;
   },
   get clips() {
-    return state.clips;
+    return get(state).clips;
   },
   get status() {
-    return state.status;
+    return get(state).status;
   },
   get error() {
-    return state.error;
+    return get(state).error;
   },
   get isConnected() {
-    return state.eventSource !== null;
+    return get(state).eventSource !== null;
   },
   initializeJob,
   loadJob,
