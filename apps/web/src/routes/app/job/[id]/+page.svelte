@@ -71,6 +71,9 @@
             clip.exportStatus = 'ready';
             clips = [...clips];
             clearInterval(poll);
+            
+            // Auto-download the clip
+            downloadFile(result.exportUrl, `${clip.name || 'clip'}.mp4`);
           } else if (result.status === 'error') {
             clip.exportStatus = 'error';
             clips = [...clips];
@@ -84,6 +87,19 @@
       clip.exportStatus = 'error';
       clips = [...clips];
     }
+  }
+  
+  /**
+   * Trigger a file download in the browser
+   */
+  function downloadFile(url: string, filename: string) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 </script>
 
