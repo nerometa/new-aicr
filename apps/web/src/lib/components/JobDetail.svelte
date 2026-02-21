@@ -4,7 +4,7 @@
   import { API_BASE } from '$lib/api';
   import ClipCard from './ClipCard.svelte';
 
-  export let id: string;
+  let { id }: { id: string } = $props();
 
   let loading = true;
   let exportingClipId: string | null = null;
