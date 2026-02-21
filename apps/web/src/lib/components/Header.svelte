@@ -1,10 +1,15 @@
 <script lang="ts">
   import { viewStore } from '$lib/stores/view';
   import { useSession, signOut } from '$lib/auth-client';
+  import { onMount } from 'svelte';
 
   const session = useSession();
 
   let isDark = $state(false);
+
+  onMount(() => {
+    isDark = document.documentElement.classList.contains('dark');
+  });
 
   function toggleTheme() {
     isDark = !isDark;

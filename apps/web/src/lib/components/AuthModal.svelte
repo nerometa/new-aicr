@@ -16,7 +16,8 @@
     try {
       await signIn.email({ email, password });
       toast.success('Login successful!');
-      window.location.href = '/app';
+      viewStore.closeAuthModal();
+      viewStore.toLanding();
     } catch (e: any) {
       toast.error(e.message || 'Login failed');
     } finally {
@@ -30,7 +31,8 @@
     try {
       await signUp.email({ email, password, name });
       toast.success('Account created!');
-      window.location.href = '/app';
+      viewStore.closeAuthModal();
+      viewStore.toLanding();
     } catch (e: any) {
       toast.error(e.message || 'Registration failed');
     } finally {

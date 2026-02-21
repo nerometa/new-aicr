@@ -31,15 +31,20 @@
   </div>
 
   {#if viewStore.current !== 'landing'}
-    <div class="mt-12">
+    <div class="mt-12 space-y-12">
       {#if viewStore.current === 'job' && jobStore.job}
-        <JobDetail id={jobStore.job.id} />
+        <section>
+          <JobDetail id={jobStore.job.id} />
+        </section>
       {/if}
 
-      <details open class="mt-8">
-        <summary class="font-bold text-lg cursor-pointer mb-4">All Jobs</summary>
+      <section class="border-t border-[var(--border)] pt-8">
         <JobsList />
-      </details>
+      </section>
+    </div>
+  {:else}
+    <div class="mt-24">
+       <JobsList />
     </div>
   {/if}
 </main>

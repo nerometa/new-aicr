@@ -22,11 +22,11 @@
       case 'pending':
         return 'text-gray-400';
       case 'processing':
-        return 'text-yellow-400';
+        return 'text-yellow-500';
       case 'ready':
-        return 'text-green-400';
+        return 'text-green-500';
       case 'error':
-        return 'text-red-400';
+        return 'text-red-500';
       default:
         return 'text-gray-400';
     }
@@ -34,8 +34,8 @@
 </script>
 
 {#if viewStore.jobsListVisible}
-  <div class="p-4 border-r border-[var(--border)] h-full overflow-y-auto">
-    <h2 class="text-lg font-bold mb-4">Jobs</h2>
+  <div class="p-4 border-t border-[var(--border)] mt-8">
+    <h2 class="text-lg font-bold mb-4">Your Jobs</h2>
     {#if loading}
       <p class="text-sm text-[var(--muted)]">Loading...</p>
     {:else if jobs.length === 0}
@@ -44,20 +44,20 @@
         <a href="/" class="text-sm text-[var(--accent)] hover:underline">Create one</a>
       </div>
     {:else}
-      <div class="grid gap-2">
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {#each jobs as job}
-          <a
-            href={`/app/job/${job.id}`}
-            class="block p-3 rounded-lg hover:bg-[var(--bg)] border border-transparent hover:border-[var(--border)] transition-colors"
+          <button
+            onclick={() => viewStore.toJob(job.id)}
+            class="block p-4 rounded-xl hover:bg-white dark:hover:bg-[#1a1a1a] border border-[var(--border)] shadow-sm transition-all text-left"
           >
-            <div class="flex justify-between items-center">
-              <p class="text-sm truncate font-semibold">{job.youtubeUrl}</p>
-              <span class={`text-xs font-bold uppercase ${statusColor(job.status)}`}>{job.status}</span>
+            <div class="flex justify-between items-start mb-2">
+              <p class="text-sm truncate font-semibold flex-1 mr-2">{job.youtubeUrl}</p>
+              <span class={`text-[10px] px-2 py-0.5 rounded-full border font-bold uppercase ${statusColor(job.status)}`}>{job.status}</span>
             </div>
-            <p class="text-xs text-[var(--muted)] mt-1">
+            <p class="text-[10px] text-[var(--muted)]">
               {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : ''}
             </p>
-          </a>
+          </button>
         {/each}
       </div>
     {/if}

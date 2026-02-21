@@ -16,6 +16,14 @@ const initialState: ViewStore = {
 
 const state = writable<ViewStore>(initialState);
 
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', (event) => {
+    if (event.state) {
+      state.update(s => ({ ...s, current: event.state.view }));
+    }
+  });
+}
+
 function navigate(view: ViewState, jobId?: string) {
   state.update(s => ({ ...s, current: view }));
   
