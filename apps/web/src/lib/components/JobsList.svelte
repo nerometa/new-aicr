@@ -5,6 +5,7 @@
   import { viewStore } from '$lib/stores/view';
 
   let jobs = $state<Job[]>([]);
+  let jobTitles = $state<Record<string, string>>({});
   let loading = $state(true);
 
   // Extract YouTube video ID from URL
@@ -19,9 +20,34 @@
     return videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
   }
 
+  // Fetch YouTube video title using oEmbed API
+  async function fetchYouTubeTitle(url: string): Promise<string> {
+    try {
+      const videoId = getYouTubeVideoId(url);
+      if (!videoId) return url;
+      
+      const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+      if (!res.ok) return url;
+      
+      const data = await res.json();
+      return data.title || url;
+    } catch {
+      return url;
+    }
+  }
+
   onMount(async () => {
     try {
       jobs = await getJobs();
+      
+      // Fetch titles for all jobs in parallel
+      const titlePromises = jobs.map(async (job) => {
+        const title = await fetchYouTubeTitle(job.youtubeUrl);
+        return [job.id, title] as const;
+      });
+      
+      const titles = await Promise.all(titlePromises);
+      jobTitles = Object.fromEntries(titles);
     } catch (e) {
       console.error('Failed to load jobs', e);
     } finally {
@@ -69,7 +95,7 @@
               </div>
             {/if}
             <div class="flex justify-between items-start mb-1">
-              <p class="text-xs sm:text-sm truncate font-semibold flex-1 mr-2 text-[var(--fg)] line-clamp-1">{job.youtubeUrl}</p>
+              <p class="text-xs sm:text-sm truncate font-semibold flex-1 mr-2 text-[var(--fg)] line-clamp-2">{jobTitles[job.id] || job.youtubeUrl}</p>
               <span class={`text-[8px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full border font-bold uppercase ${statusColor(job.status)}`}>{job.status}</span>
             </div>
             <p class="text-[8px] sm:text-[10px] text-[var(--muted)]">

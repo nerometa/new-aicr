@@ -24,6 +24,32 @@
   $: videoId = getYouTubeVideoId(id);
   $: thumbnail = videoId ? getYouTubeThumbnail(`https://youtube.com/watch?v=${videoId}`) : null;
 
+  // Fetch YouTube video title using oEmbed API
+  async function fetchYouTubeTitle(url: string): Promise<string> {
+    try {
+      const videoId = getYouTubeVideoId(url);
+      if (!videoId) return url;
+      
+      const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+      if (!res.ok) return url;
+      
+      const data = await res.json();
+      return data.title || url;
+    } catch {
+      return url;
+    }
+  }
+
+  let videoTitle = $state('');
+
+  $: {
+    if ($jobStore.job?.youtubeUrl) {
+      fetchYouTubeTitle($jobStore.job.youtubeUrl).then(title => {
+        videoTitle = title;
+      });
+    }
+  }
+
   import { onMount } from 'svelte';
   import { toast } from '$lib/toast';
 
@@ -57,6 +83,7 @@
         <img src={thumbnail} alt="Video thumbnail" class="w-full h-full object-cover" />
       </div>
     {/if}
+    <h2 class="text-lg font-bold text-[var(--fg)] mb-2">{videoTitle || 'Loading...'}</h2>
     <p class="text-xs text-[var(--muted)] break-all">{$jobStore.job.youtubeUrl}</p>
   </div>
 
