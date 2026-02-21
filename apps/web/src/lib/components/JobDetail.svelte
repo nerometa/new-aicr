@@ -25,7 +25,7 @@
   $: thumbnail = videoId ? getYouTubeThumbnail(`https://youtube.com/watch?v=${videoId}`) : null;
 
   import { onMount } from 'svelte';
-  import { toast } from 'svelte-sonner';
+  import { toast } from '$lib/toast';
 
   onMount(() => {
     jobStore.subscribeToJob(id);
