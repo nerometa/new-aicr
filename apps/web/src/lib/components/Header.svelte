@@ -40,7 +40,7 @@
         LOGOUT
       </button>
     {:else}
-      <button onclick={() => viewStore.openAuthModal()} class="bg-[var(--accent)] text-white px-6 py-2 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity">
+      <button onclick={() => $viewStore.openAuthModal()} class="bg-[var(--accent)] text-white px-6 py-2 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity">
         Login
       </button>
     {/if}

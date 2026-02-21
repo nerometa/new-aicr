@@ -33,9 +33,9 @@
   }
 </script>
 
-{#if viewStore.jobsListVisible}
+{#if $viewStore.jobsListVisible}
   <div class="p-4 border-t border-[var(--border)] mt-8">
-    <h2 class="text-lg font-bold mb-4">Your Jobs</h2>
+    <h2 class="text-lg font-bold mb-4 text-[var(--fg)]">Your Jobs</h2>
     {#if loading}
       <p class="text-sm text-[var(--muted)]">Loading...</p>
     {:else if jobs.length === 0}
@@ -48,10 +48,10 @@
         {#each jobs as job}
           <button
             onclick={() => viewStore.toJob(job.id)}
-            class="block p-4 rounded-xl hover:bg-white dark:hover:bg-[#1a1a1a] border border-[var(--border)] shadow-sm transition-all text-left"
+            class="block p-4 rounded-xl hover:bg-[var(--bg)] border border-[var(--border)] shadow-sm transition-all text-left"
           >
             <div class="flex justify-between items-start mb-2">
-              <p class="text-sm truncate font-semibold flex-1 mr-2">{job.youtubeUrl}</p>
+              <p class="text-sm truncate font-semibold flex-1 mr-2 text-[var(--fg)]">{job.youtubeUrl}</p>
               <span class={`text-[10px] px-2 py-0.5 rounded-full border font-bold uppercase ${statusColor(job.status)}`}>{job.status}</span>
             </div>
             <p class="text-[10px] text-[var(--muted)]">

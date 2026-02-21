@@ -21,12 +21,12 @@
   }
 </script>
 
-<div class="flex flex-col sm:flex-row gap-2 max-w-2xl w-full p-2 bg-white dark:bg-[#1a1a1a] rounded-2xl border border-[var(--border)] shadow-sm">
+<div class="flex flex-col sm:flex-row gap-2 max-w-2xl w-full p-2 bg-[var(--bg)] rounded-2xl border border-[var(--border)] shadow-sm">
   <input
     bind:value={url}
     type="url"
     placeholder="https://youtube.com/watch?v=..."
-    class="flex-1 bg-transparent px-4 py-3 text-sm focus:outline-none transition-colors"
+    class="flex-1 bg-transparent px-4 py-3 text-sm text-[var(--fg)] focus:outline-none transition-colors"
   />
   <button
     onclick={submit}
