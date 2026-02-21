@@ -5,7 +5,9 @@ import { eq } from 'drizzle-orm';
 import { getTask, getProjects, previewUrl } from './klap';
 import type { KlapProject, KlapTask } from './klap';
 
+// Constants
 const QUEUE_KEY = 'aicr:polling_jobs';
+const POLL_INTERVAL_MS = 30_000; // Poll Klap every 30 seconds
 
 export const enqueueJob = (jobId: string) => redis.sadd(QUEUE_KEY, jobId);
 
@@ -15,13 +17,14 @@ export const startPoller = () => {
     for (const jobId of jobIds) {
       await pollJob(jobId);
     }
-  }, 30_000);
+  }, POLL_INTERVAL_MS);
 };
 
 const pollJob = async (jobId: string) => {
   try {
     const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId));
     if (!job?.klapTaskId) {
+      console.log(`[Poller] Job ${jobId} has no klapTaskId, removing from queue`);
       await redis.srem(QUEUE_KEY, jobId);
       return;
     }
@@ -32,6 +35,7 @@ const pollJob = async (jobId: string) => {
     if (task.status === 'processing') return;
 
     if (task.status === 'error') {
+      console.error(`[Poller] Job ${jobId} failed: ${task.error}`);
       await db.update(jobs).set({ 
         status: 'error', 
         errorMessage: task.error || 'Klap processing failed' 
@@ -43,7 +47,7 @@ const pollJob = async (jobId: string) => {
     // task.status === 'ready'
     const folderId = task.output_id;
     if (!folderId) {
-      console.error(`pollJob: No folderId for ready job ${jobId}`);
+      console.error(`[Poller] Job ${jobId} has no folderId`);
       await redis.srem(QUEUE_KEY, jobId);
       return;
     }
@@ -70,9 +74,10 @@ const pollJob = async (jobId: string) => {
       }).onConflictDoNothing();
     }
 
+    console.log(`[Poller] Job ${jobId} completed with ${projects.length} clips`);
     await redis.srem(QUEUE_KEY, jobId);
   } catch (error) {
-    console.error(`pollJob error for ${jobId}:`, error);
+    console.error(`[Poller] Error for job ${jobId}:`, error);
     await redis.srem(QUEUE_KEY, jobId);
   }
 };

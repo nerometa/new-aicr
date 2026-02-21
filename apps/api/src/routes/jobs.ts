@@ -5,20 +5,68 @@ import { eq } from 'drizzle-orm';
 import { createVideoTask, isKlapConfigured } from '../services/klap';
 import { enqueueJob } from '../services/poller';
 import { randomUUID } from 'crypto';
+import { redis } from '../lib/redis';
 
 const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[a-zA-Z0-9_-]{11}$/;
+
+// Constants
+const RATE_LIMIT_JOBS_PER_HOUR = 10;
+const RATE_LIMIT_WINDOW_SEC = 3600; // 1 hour
 
 // Job status values: pending -> processing -> ready | error
 // "ready" is Klap's term (not "done")
 
+/**
+ * Check rate limit for an IP address
+ * Returns true if rate limit exceeded
+ */
+async function isRateLimited(ip: string): Promise<boolean> {
+  const key = `rate_limit:${ip}`;
+  const count = await redis.incr(key);
+  
+  if (count === 1) {
+    // First request, set expiry
+    await redis.expire(key, RATE_LIMIT_WINDOW_SEC);
+  }
+  
+  return count > RATE_LIMIT_JOBS_PER_HOUR;
+}
+
+/**
+ * Sanitize YouTube URL - validate and normalize
+ */
+function sanitizeYouTubeUrl(url: string): string | null {
+  if (!YOUTUBE_URL_REGEX.test(url)) return null;
+  
+  try {
+    // Parse and normalize the URL
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
-  .post('/', async ({ body, set }) => {
+  .post('/', async ({ body, set, request }) => {
     if (!isKlapConfigured()) {
       set.status = 500;
       return { error: 'Klap API not configured', message: 'KLAP_API_KEY is missing.' };
     }
 
-    if (!YOUTUBE_URL_REGEX.test(body.youtubeUrl)) {
+    // Rate limiting by IP
+    const ip = request.headers.get('x-forwarded-for') || 
+               request.headers.get('x-real-ip') || 
+               'unknown';
+    
+    if (await isRateLimited(ip)) {
+      set.status = 429;
+      return { error: 'Rate limit exceeded', message: `Maximum ${RATE_LIMIT_JOBS_PER_HOUR} jobs per hour allowed.` };
+    }
+
+    // Sanitize URL
+    const sanitizedUrl = sanitizeYouTubeUrl(body.youtubeUrl);
+    if (!sanitizedUrl) {
       set.status = 400;
       return { error: 'Invalid URL', message: 'Please provide a valid YouTube URL' };
     }
@@ -26,12 +74,12 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
     const jobId = randomUUID();
     
     try {
-      const klapTask = await createVideoTask(body.youtubeUrl);
+      const klapTask = await createVideoTask(sanitizedUrl);
       
       await db.insert(jobs).values({
         id: jobId,
         userId: null, // Anonymous jobs - no FK constraint
-        youtubeUrl: body.youtubeUrl,
+        youtubeUrl: sanitizedUrl,
         klapTaskId: klapTask.id,
         status: 'pending',
         createdAt: new Date(),
@@ -39,7 +87,8 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       });
 
       await enqueueJob(jobId);
-      return { id: jobId, status: 'pending', youtubeUrl: body.youtubeUrl };
+      console.log(`[Jobs] Created job ${jobId} for ${sanitizedUrl}`);
+      return { id: jobId, status: 'pending', youtubeUrl: sanitizedUrl };
     } catch (error) {
       console.error('Job creation error:', error);
       set.status = 500;

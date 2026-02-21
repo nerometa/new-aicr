@@ -3,6 +3,9 @@ import { env } from '../env';
 const BASE = env.KLAP_API_URL;
 const KEY = env.KLAP_API_KEY;
 
+// Constants
+const KLAP_REQUEST_TIMEOUT_MS = 30_000; // 30 seconds timeout for API requests
+
 // Klap API Types - based on https://docs.klap.app/object-formats
 // Task status: "processing" | "ready" | "error"
 // Export status: "processing" | "ready" | "error"
@@ -51,15 +54,22 @@ async function klapRequest<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE}${path}`;
   console.log(`[Klap] ${options?.method || 'GET'} ${url}`);
 
+  // Create abort controller for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), KLAP_REQUEST_TIMEOUT_MS);
+
   try {
     const res = await fetch(url, {
       ...options,
+      signal: controller.signal,
       headers: {
         'Authorization': `Bearer ${KEY}`,
         'Content-Type': 'application/json',
         ...options?.headers,
       },
     });
+
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -69,6 +79,14 @@ async function klapRequest<T>(path: string, options?: RequestInit): Promise<T> {
 
     return res.json() as Promise<T>;
   } catch (error) {
+    clearTimeout(timeoutId);
+    
+    // Handle timeout
+    if (error instanceof Error && (error as Error).name === 'AbortError') {
+      console.error(`[Klap] Request timeout after ${KLAP_REQUEST_TIMEOUT_MS}ms`);
+      throw new Error(`Klap API request timed out after ${KLAP_REQUEST_TIMEOUT_MS / 1000} seconds`);
+    }
+    
     // Provide more helpful error message for network issues
     if (error instanceof TypeError && (error as Error).message.includes('FailedToOpenSocket')) {
       console.error(`[Klap] Network error - cannot reach ${url}`);
