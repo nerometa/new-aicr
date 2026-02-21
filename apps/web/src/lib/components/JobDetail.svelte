@@ -88,22 +88,19 @@
     <p class="text-xs text-[var(--muted)] break-all">{$jobStore.job.youtubeUrl}</p>
   </div>
 
-  <!-- Status indicator (no duplicate raw text) -->
+  <!-- Status indicator -->
   <div class="border border-[var(--border)] rounded-lg p-4 mb-8 flex items-center gap-4 bg-[var(--bg)]">
+    <span class="text-xs tracking-widest text-[var(--muted)] uppercase font-semibold">Status</span>
+    
     {#if $jobStore.status === 'processing'}
-      <span class="text-xs tracking-widest text-[var(--muted)] uppercase font-semibold">Status</span>
       <span class="font-bold uppercase text-sm text-yellow-500">Processing</span>
-      <span class="text-xs text-[var(--muted)] animate-pulse">Klap is analyzing your video... this can take a few minutes.</span>
+      <span class="text-xs text-[var(--muted)] animate-pulse ml-2">Klap is analyzing your video...</span>
     {:else if $jobStore.status === 'error'}
-      <span class="text-xs tracking-widest text-[var(--muted)] uppercase font-semibold">Status</span>
       <span class="font-bold uppercase text-sm text-red-500">Error</span>
-      <span class="text-xs text-red-500">{$jobStore.error || 'Processing failed'}</span>
+      <span class="text-xs text-red-500 ml-2">{$jobStore.error || 'Processing failed'}</span>
     {:else if $jobStore.status === 'ready'}
-      <span class="text-xs tracking-widest text-[var(--muted)] uppercase font-semibold">Status</span>
-      <span class="font-bold uppercase text-sm text-green-500">Ready</span>
-      <span class="px-3 py-1 text-xs rounded-full bg-[var(--accent)] text-white font-bold">Ready</span>
+      <span class="px-3 py-1 text-xs rounded-full bg-[var(--accent)] text-white font-bold uppercase">Ready</span>
     {:else}
-      <span class="text-xs tracking-widest text-[var(--muted)] uppercase font-semibold">Status</span>
       <span class="font-bold uppercase text-sm text-[var(--fg)]">{$jobStore.status}</span>
     {/if}
   </div>
