@@ -46,7 +46,7 @@
           class="border border-[#2a2a2a] p-4 hover:border-[#d4ff00] transition-colors flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2"
         >
           <div class="min-w-0 flex-1">
-            <p class="text-sm mb-1 break-all">{job.youtubeUrl}</p>
+            <p class="text-sm mb-1">{job.youtubeUrl}</p>
             <p class="text-xs text-[#888]">{job.createdAt ? new Date(job.createdAt).toLocaleDateString() : ''}</p>
           </div>
           <span class="text-xs font-bold uppercase {statusColor(job.status)} shrink-0">{job.status}</span>
