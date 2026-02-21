@@ -123,7 +123,7 @@
           <div class="p-4 border-t border-[#2a2a2a]">
             <p class="text-xs text-[#888] mb-1">{clip.name || 'Untitled Clip'}</p>
             <p class="text-[#d4ff00] text-xs mb-1">
-              VIRALITY: {Math.round((clip.viralityScore || 0) * 100)}%
+              VIRALITY: {clip.viralityScore}/100
             </p>
             {#if clip.viralityScoreExplanation}
               <p class="text-xs text-[#666] mb-4 line-clamp-2">{clip.viralityScoreExplanation}</p>
