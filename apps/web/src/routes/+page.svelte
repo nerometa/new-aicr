@@ -1,47 +1,56 @@
 <script lang="ts">
-  import { createJob } from '$lib/api';
-  import { toast } from '$lib/toast';
-  
-  let url = $state('');
-  let loading = $state(false);
-  
-  async function submit() {
-    if (!url) return;
-    loading = true;
-    try {
-      const job = await createJob(url);
-      window.location.href = `/app/job/${job.id}`;
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to start. Check your URL.';
-      toast.error(message);
-    } finally {
-      loading = false;
-    }
-  }
+  import Header from '$lib/components/Header.svelte';
+  import HeroInput from '$lib/components/HeroInput.svelte';
+  import JobDetail from '$lib/components/JobDetail.svelte';
+  import JobsList from '$lib/components/JobsList.svelte';
+  import AuthModal from '$lib/components/AuthModal.svelte';
+  import { viewStore } from '$lib/stores/view';
+  import { jobStore } from '$lib/stores/job';
 </script>
 
-<section class="px-8 pt-24 pb-16 max-w-4xl">
-  <p class="text-xs tracking-[0.3em] text-[#d4ff00] mb-4">AI CONTENT REPURPOSER</p>
-  <h1 class="font-['Barlow_Condensed'] text-[clamp(4rem,12vw,8rem)] font-black leading-none mb-8 tracking-tight">
-    LONG VIDEO<br/>→ VIRAL SHORTS
-  </h1>
-  <p class="text-[#888] mb-12 max-w-xl">
-    Paste a YouTube URL. Our AI analyzes the video, extracts the best moments, and hands you ready-to-post clips.
-  </p>
-  
-  <div class="flex gap-0 max-w-2xl">
-    <input
-      bind:value={url}
-      type="url"
-      placeholder="https://youtube.com/watch?v=..."
-      class="flex-1 bg-transparent border border-[#2a2a2a] px-4 py-3 text-sm focus:outline-none focus:border-[#d4ff00] transition-colors"
-    />
-    <button
-      onclick={submit}
-      disabled={loading || !url}
-      class="bg-[#d4ff00] text-black px-8 py-3 font-['Barlow_Condensed'] font-bold text-sm tracking-wider hover:bg-white transition-colors disabled:opacity-40"
-    >
-      {loading ? 'PROCESSING...' : 'GENERATE'}
-    </button>
+<svelte:head>
+  <title>AI Content Repurposer</title>
+</svelte:head>
+
+<Header />
+
+<main class="max-w-3xl mx-auto pt-12 sm:pt-24 px-4">
+  {#if viewStore.current === 'landing'}
+    <div class="text-center mb-12">
+        <h1 class="font-['Barlow_Condensed'] text-[clamp(3rem,10vw,6rem)] font-black leading-none mb-4 tracking-tight">
+            LONG VIDEO<br />→ VIRAL SHORTS
+        </h1>
+        <p class="text-[var(--muted)] max-w-xl mx-auto">
+            Paste a YouTube URL. Our AI analyzes the video, extracts the best moments, and hands you ready-to-post clips.
+        </p>
+    </div>
+  {/if}
+
+  <div class="flex justify-center">
+    <HeroInput />
   </div>
-</section>
+
+  {#if viewStore.current !== 'landing'}
+    <div class="mt-12">
+      {#if viewStore.current === 'job' && jobStore.job}
+        <JobDetail id={jobStore.job.id} />
+      {/if}
+
+      <details open class="mt-8">
+        <summary class="font-bold text-lg cursor-pointer mb-4">All Jobs</summary>
+        <JobsList />
+      </details>
+    </div>
+  {/if}
+</main>
+
+{#if viewStore.showAuthModal}
+  <AuthModal />
+{/if}
+
+<style>
+  :global(body) {
+    background-color: var(--bg);
+    color: var(--fg);
+  }
+</style>
