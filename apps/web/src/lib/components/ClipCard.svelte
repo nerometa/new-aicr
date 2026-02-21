@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Clip } from '@aicr/shared';
 
-  let { clip, onExport }: { clip: Clip; onExport: (clip: Clip) => void } = $props();
+  let { clip, onExport, exportingClipId = null }: { clip: Clip; onExport: (clip: Clip) => void; exportingClipId?: string | null } = $props();
 
   function downloadFile(url: string, filename: string) {
     const a = document.createElement('a');
@@ -42,7 +42,7 @@
       >
         DOWNLOAD
       </button>
-    {:else if clip.exportStatus === 'processing'}
+    {:else if clip.exportStatus === 'processing' || (exportingClipId === clip.id)}
       <p class="text-xs text-center text-[var(--muted)] animate-pulse py-2">Exporting...</p>
     {:else if clip.exportStatus === 'error'}
       <p class="text-xs text-center text-red-500 py-2">Export failed</p>

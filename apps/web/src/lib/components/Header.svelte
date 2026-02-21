@@ -31,8 +31,8 @@
     AICR
   </a>
   <div class="flex gap-2 sm:gap-4 items-center">
-    <button onclick={toggleTheme} class="text-xs sm:text-sm">
-      {isDark ? 'Light' : 'Dark'}
+    <button onclick={toggleTheme} class="text-sm">
+      {isDark ? '☀️' : '🌙'}
     </button>
     {#if $session.data?.user}
       <span class="hidden sm:inline text-xs text-[var(--muted)]">{$session.data.user.email}</span>
