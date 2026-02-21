@@ -8,6 +8,7 @@
 
   let loading = true;
   let exportingClipId: string | null = null;
+  let videoTitle = $state('');
 
   // Extract YouTube video ID from URL
   function getYouTubeVideoId(url: string): string | null {
@@ -21,8 +22,9 @@
     return videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
   }
 
-  $: videoId = getYouTubeVideoId(id);
-  $: thumbnail = videoId ? getYouTubeThumbnail(`https://youtube.com/watch?v=${videoId}`) : null;
+  // Derived values (replaces $: reactive statements)
+  const videoId = $derived(getYouTubeVideoId(id));
+  const thumbnail = $derived(videoId ? getYouTubeThumbnail(`https://youtube.com/watch?v=${videoId}`) : null);
 
   // Fetch YouTube video title using oEmbed API
   async function fetchYouTubeTitle(url: string): Promise<string> {
@@ -40,15 +42,14 @@
     }
   }
 
-  let videoTitle = $state('');
-
-  $: {
+  // Effect to fetch video title when job changes (replaces $: block)
+  $effect(() => {
     if ($jobStore.job?.youtubeUrl) {
       fetchYouTubeTitle($jobStore.job.youtubeUrl).then(title => {
         videoTitle = title;
       });
     }
-  }
+  });
 
   import { onMount } from 'svelte';
   import { toast } from '$lib/toast';
