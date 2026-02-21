@@ -55,7 +55,7 @@
   import { toast } from '$lib/toast';
 
   onMount(() => {
-    jobStore.subscribeToJob(id);
+    jobStore.initializeJob(id);
   });
 
   async function handleExport(clipId: string) {
