@@ -14,5 +14,6 @@ export const clipsRoute = new Elysia({ prefix: '/api/clips' })
       previewUrl: c.previewUrl,
       exportStatus: c.exportStatus,
       exportUrl: c.exportUrl,
+      embedUrl: c.embedUrl ?? null,
     }));
   });

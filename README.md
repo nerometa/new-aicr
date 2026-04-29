@@ -115,9 +115,19 @@ User pastes YouTube URL
   → Job saved in Turso + task_id pushed to Redis queue
   → Poller worker polls Klap every 30s
   → On complete: projects saved to Turso, user notified via SSE
-  → Frontend renders clip cards with klap.app/player/{id} iframes
+  → Frontend renders clip cards with embed URLs for authenticated users
   → User clicks Export → backend POST /api/exports → polls → returns src_url
 ```
+
+### Klap Managed Users (New)
+
+Authenticated users can view clips without a Klap account:
+- Managed user created lazily on first job
+- Access token generated on-demand after task completion
+- Embed URLs returned in API responses (`embedUrl` field)
+- Anonymous jobs fallback to preview URLs
+
+See `AGENTS.md` for implementation details.
 
 ---
 

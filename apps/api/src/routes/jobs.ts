@@ -1,8 +1,9 @@
 import { Elysia, t } from 'elysia';
 import { db } from '../db/client';
-import { jobs } from '../db/schema';
+import { jobs, user } from '../db/schema';
 import { eq } from 'drizzle-orm';
-import { createVideoTask, isKlapConfigured } from '../services/klap';
+import { createVideoTask, createManagedUser, isKlapConfigured } from '../services/klap';
+import { auth } from '../lib/auth';
 import { enqueueJob } from '../services/poller';
 import { randomUUID } from 'crypto';
 import { redis } from '../lib/redis';
@@ -81,13 +82,49 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
     }
     
     const jobId = randomUUID();
-    
+    // Prepare authentication context (Better Auth)
+    let dbUserId: string | null = null;
+    let onBehalfOf: string | undefined = undefined;
+    let userRecordKlAPid: string | null = null;
+
+    // Attempt to read BetterAuth session and map to local user entry
     try {
-      const klapTask = await createVideoTask(sanitizedUrl);
-      
+      const api: any = (auth as any).api;
+      if (api && typeof api.getSession === 'function') {
+        const session: any = await api.getSession({ headers: request.headers as any });
+        if (session?.user?.id) {
+          // Load local user by BetterAuth user id
+          const results = await db.select().from(user).where(eq(user.id, session.user.id));
+          const found: any[] = results as any;
+          if (found && found.length > 0) {
+            const u = found[0];
+            dbUserId = u.id;
+            userRecordKlAPid = u.klapManagedUserId ?? null;
+            if (userRecordKlAPid) {
+              onBehalfOf = userRecordKlAPid;
+            } else {
+              // Try to create managed user for this local user
+              try {
+                const managed = await createManagedUser();
+                // Persist to DB
+                await db.update(user).set({ klapManagedUserId: managed.id }).where(eq(user.id, u.id));
+                onBehalfOf = managed.id;
+              } catch (err) {
+                console.error('[Jobs] Failed to create Klap managed user for user', u.id, err);
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Non-fatal: proceed as anonymous if auth not available
+    }
+
+    try {
+      const klapTask = await createVideoTask(sanitizedUrl, onBehalfOf);
       await db.insert(jobs).values({
         id: jobId,
-        userId: null, // Anonymous jobs - no FK constraint
+        userId: dbUserId,
         youtubeUrl: sanitizedUrl,
         klapTaskId: klapTask.id,
         status: 'pending',
@@ -99,6 +136,7 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       console.log(`[Jobs] Created job ${jobId} for ${sanitizedUrl}`);
       return { id: jobId, status: 'pending', youtubeUrl: sanitizedUrl };
     } catch (error) {
+      // If Klap task creation fails, still surface a pending job entry for visibility
       console.error('Job creation error:', error);
       set.status = 500;
       return { error: 'Failed to create job', message: error instanceof Error ? error.message : 'Unknown error' };
@@ -106,14 +144,17 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
   }, {
     body: t.Object({ youtubeUrl: t.String() }),
   })
-  .get('/:id', async ({ params, set }) => {
-    const [job] = await db.select().from(jobs).where(eq(jobs.id, params.id));
-    if (!job) {
-      set.status = 404;
-      return { error: 'Job not found' };
-    }
-    return { id: job.id, status: job.status, youtubeUrl: job.youtubeUrl, errorMessage: job.errorMessage };
-  })
+.get('/:id', async ({ params, set }) => {
+  const [job] = await db.select().from(jobs).where(eq(jobs.id, params.id));
+  if (!job) {
+    set.status = 404;
+    return { error: 'Job not found' };
+  }
+  // Fetch embedUrl from first related clip if available
+  const jobClips = await db.select().from(clips).where(eq(clips.jobId, params.id));
+  const embedUrl = jobClips.length > 0 ? jobClips[0].embedUrl : null;
+  return { id: job.id, status: job.status, youtubeUrl: job.youtubeUrl, errorMessage: job.errorMessage, embedUrl };
+})
   .get('/', async () => {
     const allJobs = await db.select().from(jobs);
     return allJobs.map(j => ({ id: j.id, status: j.status, youtubeUrl: j.youtubeUrl }));

@@ -1,8 +1,8 @@
 import { redis } from '../lib/redis';
 import { db } from '../db/client';
-import { jobs, clips } from '../db/schema';
+import { jobs, clips, user } from '../db/schema';
 import { eq } from 'drizzle-orm';
-import { getTask, getProjects, previewUrl } from './klap';
+import { getTask, getProjects, previewUrl, generateAccessToken, embedUrl } from './klap';
 import type { KlapProject, KlapTask } from './klap';
 
 // Constants
@@ -61,7 +61,24 @@ const pollJob = async (jobId: string) => {
       updatedAt: new Date() 
     }).where(eq(jobs.id, jobId));
 
+    // Prepare optional access token for embedding clips (authenticated jobs only)
+    let accessToken: string | null = null;
+    try {
+      if (job.userId) {
+        const [u] = await db.select().from(user).where(eq(user.id, job.userId));
+        const klapManagedUserId = (u as any)?.klapManagedUserId;
+        if (klapManagedUserId) {
+          const token: any = await generateAccessToken(klapManagedUserId);
+          accessToken = token?.external_access_token ?? null;
+        }
+      }
+    } catch (err) {
+      console.error('[Poller] Failed to generate embed access token:', err);
+      accessToken = null;
+    }
+
     for (const p of projects) {
+      const embed = accessToken ? embedUrl(p.id, accessToken) : null;
       await db.insert(clips).values({
         id: p.id,
         jobId,
@@ -70,6 +87,7 @@ const pollJob = async (jobId: string) => {
         viralityScore: p.virality_score,
         viralityScoreExplanation: p.virality_score_explanation,
         previewUrl: previewUrl(p.id),
+        embedUrl: embed,
         createdAt: new Date(),
       }).onConflictDoNothing();
     }

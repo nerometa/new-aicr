@@ -13,6 +13,7 @@ export const user = sqliteTable('user', {
   image: text('image'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`).notNull(),
+  klapManagedUserId: text('klap_managed_user_id'),
 });
 
 export const session = sqliteTable('session', {
@@ -77,6 +78,7 @@ export const clips = sqliteTable('clips', {
   viralityScore: real('virality_score'),
   viralityScoreExplanation: text('virality_score_explanation'),
   previewUrl: text('preview_url'),
+  embedUrl: text('embed_url'),
   exportStatus: text('export_status'),
   exportUrl: text('export_url'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),

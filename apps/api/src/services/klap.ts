@@ -20,6 +20,15 @@ export interface KlapTask {
   error?: string;
 }
 
+// New: Managed user and token related types
+export interface KlapManagedUser {
+  id: string;
+}
+
+export interface KlapAccessToken {
+  external_access_token: string;
+}
+
 export interface KlapProject {
   id: string;
   author_id: string;
@@ -102,14 +111,43 @@ export const klapGet = <T>(path: string): Promise<T> => klapRequest<T>(path);
 export const klapPost = <T>(path: string, body: object): Promise<T> =>
   klapRequest<T>(path, { method: 'POST', body: JSON.stringify(body) });
 
-export const createVideoTask = (sourceUrl: string): Promise<KlapTask> =>
-  klapPost<KlapTask>('/tasks/video-to-shorts', {
+export const createVideoTask = (sourceUrl: string, onBehalfOf?: string): Promise<KlapTask> => {
+  const body = {
     source_video_url: sourceUrl,
     language: 'en',
     max_duration: env.KLAP_MAX_DURATION,
     max_clip_count: env.KLAP_MAX_CLIP_COUNT,
     editing_options: { intro_title: false },
-  });
+  };
+
+  const options: any = {
+    method: 'POST',
+    body: JSON.stringify(body),
+  };
+  // Optional header to identify the actor on whose behalf the task is created
+  if (onBehalfOf) {
+    options.headers = {
+      'X-On-Behalf-Of': onBehalfOf,
+    };
+  }
+
+  return klapRequest<KlapTask>('/tasks/video-to-shorts', options);
+};
+
+// New: Create a managed user via Klap API
+export const createManagedUser = async (): Promise<KlapManagedUser> => {
+  return klapPost<KlapManagedUser>('/users', {});
+};
+
+// New: Generate access token for a given user
+export const generateAccessToken = async (userId: string): Promise<KlapAccessToken> => {
+  return klapPost<KlapAccessToken>(`/users/${userId}/tokens`, {});
+};
+
+// Helper: build embed URL for Klap projects using a token
+export const embedUrl = (projectId: string, token: string): string => {
+  return `https://app.klap.app/embed/${projectId}#external_access_token=${token}`;
+};
 
 export const getTask = (taskId: string): Promise<KlapTask> => 
   klapGet<KlapTask>(`/tasks/${taskId}`);

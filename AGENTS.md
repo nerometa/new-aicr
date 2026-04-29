@@ -109,6 +109,52 @@ signal?.addEventListener('abort', () => { clearInterval(intervalId); });
 ---
 
 ## Test Count
-- Backend: 31 tests
+- Backend: 43 tests (was 31, added 12 new tests for Klap managed user flow)
 - Frontend: 6 tests
-- Total: 37 tests
+- Total: 49 tests
+
+---
+
+## Klap Managed Users Feature
+
+### Overview
+Authenticated users can view generated clips without needing a Klap account. This is implemented via Klap's Managed Users & Embeds feature.
+
+### Flow
+1. **Job Creation**: When an authenticated user creates a job
+   - Checks if user has `klapManagedUserId`
+   - If not, creates managed user via `POST /users`
+   - Stores `klapManagedUserId` in user record
+   - Passes `X-On-Behalf-Of` header to Klap when creating tasks
+
+2. **Task Processing**: Poller monitors Klap task status
+
+3. **Completion**: When task completes
+   - Generates access token via `POST /users/{userId}/tokens`
+   - Constructs embed URL: `https://app.klap.app/embed/{projectId}#external_access_token={token}`
+   - Stores embed URL in clips table
+
+4. **API Response**: Job and clip endpoints return `embedUrl` field
+   - For authenticated jobs: embed URL with token
+   - For anonymous jobs: null (fallback to previewUrl)
+
+### Database Schema Updates
+```typescript
+// User table
+klapManagedUserId: text('klap_managed_user_id') // nullable
+
+// Clips table
+embedUrl: text('embed_url') // nullable
+```
+
+### Key Implementation Files
+- `apps/api/src/services/klap.ts` - Managed user and token functions
+- `apps/api/src/routes/jobs.ts` - Auth-aware job creation
+- `apps/api/src/services/poller.ts` - Token generation on completion
+- `apps/api/src/routes/clips.ts` - Embed URL in responses
+
+### Security Notes
+- Tokens are generated on-demand and never stored in database
+- One managed user per AICR user (lazy creation on first job)
+- Anonymous jobs continue to work without embed URLs
+- Graceful degradation if managed user creation fails
