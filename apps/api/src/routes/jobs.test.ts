@@ -1,8 +1,32 @@
 import { describe, it, expect } from 'bun:test';
 
-const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[a-zA-Z0-9_-]{11}$/;
+/**
+ * Extract video ID from various YouTube URL formats
+ */
+function extractVideoId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/|m\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})(?!\w)/,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
 
-const isValidYouTubeUrl = (url: string): boolean => YOUTUBE_URL_REGEX.test(url);
+/**
+ * Sanitize YouTube URL - validate and normalize to standard format
+ */
+function sanitizeYouTubeUrl(url: string): string | null {
+  const videoId = extractVideoId(url);
+  if (!videoId) return null;
+  
+  // Return normalized URL in standard format
+  return `https://www.youtube.com/watch?v=${videoId}`;
+}
+
+const isValidYouTubeUrl = (url: string): boolean => sanitizeYouTubeUrl(url) !== null;
 
 describe('YouTube URL validation', () => {
   describe('valid URLs', () => {
@@ -38,8 +62,66 @@ describe('YouTube URL validation', () => {
       expect(isValidYouTubeUrl('https://www.youtube.com/watch?v=abc-def1234')).toBe(true);
     });
 
-    it('rejects URLs with query params after video ID', () => {
-      expect(isValidYouTubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=123s')).toBe(false);
+    // New tests for additional URL formats
+    it('accepts mobile m.youtube.com URLs', () => {
+      expect(isValidYouTubeUrl('https://m.youtube.com/watch?v=dQw4w9WgXcQ')).toBe(true);
+    });
+
+    it('accepts URLs with query params (timestamps)', () => {
+      expect(isValidYouTubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=123s')).toBe(true);
+    });
+
+    it('accepts URLs with playlist params', () => {
+      expect(isValidYouTubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLxxxxx')).toBe(true);
+    });
+
+    it('accepts YouTube shorts URLs', () => {
+      expect(isValidYouTubeUrl('https://www.youtube.com/shorts/dQw4w9WgXcQ')).toBe(true);
+    });
+
+    it('accepts YouTube live URLs', () => {
+      expect(isValidYouTubeUrl('https://www.youtube.com/live/dQw4w9WgXcQ')).toBe(true);
+    });
+
+    it('accepts mobile URLs with query params', () => {
+      expect(isValidYouTubeUrl('https://m.youtube.com/watch?v=dQw4w9WgXcQ&t=30s')).toBe(true);
+    });
+  });
+
+  describe('URL normalization', () => {
+    it('normalizes URLs with query params to standard format', () => {
+      const result = sanitizeYouTubeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=123s');
+      expect(result).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    });
+
+    it('normalizes mobile URLs to standard format', () => {
+      const result = sanitizeYouTubeUrl('https://m.youtube.com/watch?v=dQw4w9WgXcQ');
+      expect(result).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    });
+
+    it('normalizes shorts URLs to standard format', () => {
+      const result = sanitizeYouTubeUrl('https://www.youtube.com/shorts/dQw4w9WgXcQ');
+      expect(result).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    });
+
+    it('normalizes youtu.be URLs to standard format', () => {
+      const result = sanitizeYouTubeUrl('https://youtu.be/dQw4w9WgXcQ');
+      expect(result).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    });
+
+    it('normalizes embed URLs to standard format', () => {
+      const result = sanitizeYouTubeUrl('https://www.youtube.com/embed/dQw4w9WgXcQ');
+      expect(result).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    });
+
+    it('normalizes live URLs to standard format', () => {
+      const result = sanitizeYouTubeUrl('https://www.youtube.com/live/dQw4w9WgXcQ');
+      expect(result).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    });
+
+    it('adds https:// to URLs without protocol', () => {
+      const result = sanitizeYouTubeUrl('www.youtube.com/watch?v=dQw4w9WgXcQ');
+      expect(result).toBe('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
     });
   });
 
@@ -67,13 +149,35 @@ describe('YouTube URL validation', () => {
     it('rejects random text', () => {
       expect(isValidYouTubeUrl('not a url at all')).toBe(false);
     });
+  });
 
-    it('rejects YouTube shorts URLs', () => {
-      expect(isValidYouTubeUrl('https://www.youtube.com/shorts/dQw4w9WgXcQ')).toBe(false);
+  describe('video ID extraction', () => {
+    it('extracts video ID from standard URLs', () => {
+      expect(extractVideoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');
     });
 
-    it('rejects YouTube live URLs', () => {
-      expect(isValidYouTubeUrl('https://www.youtube.com/live/dQw4w9WgXcQ')).toBe(false);
+    it('extracts video ID from youtu.be URLs', () => {
+      expect(extractVideoId('https://youtu.be/dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');
+    });
+
+    it('extracts video ID from mobile URLs', () => {
+      expect(extractVideoId('https://m.youtube.com/watch?v=dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');
+    });
+
+    it('extracts video ID from shorts URLs', () => {
+      expect(extractVideoId('https://www.youtube.com/shorts/dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');
+    });
+
+    it('extracts video ID from live URLs', () => {
+      expect(extractVideoId('https://www.youtube.com/live/dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ');
+    });
+
+    it('extracts video ID from URLs with query params', () => {
+      expect(extractVideoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=123s')).toBe('dQw4w9WgXcQ');
+    });
+
+    it('returns null for invalid URLs', () => {
+      expect(extractVideoId('https://example.com/video')).toBe(null);
     });
   });
 });

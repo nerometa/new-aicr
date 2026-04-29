@@ -8,9 +8,9 @@
   let jobTitles = $state<Record<string, string>>({});
   let loading = $state(true);
 
-  // Extract YouTube video ID from URL
+  // Extract YouTube video ID from URL - supports multiple formats
   function getYouTubeVideoId(url: string): string | null {
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([^&\s/?#]+)/);
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/|youtube\.com\/live\/|youtube\.com\/embed\/|m\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})(?!\w)/);
     return match ? match[1] : null;
   }
 

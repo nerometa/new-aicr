@@ -7,8 +7,6 @@ import { enqueueJob } from '../services/poller';
 import { randomUUID } from 'crypto';
 import { redis } from '../lib/redis';
 
-const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[a-zA-Z0-9_-]{11}$/;
-
 // Constants
 const RATE_LIMIT_JOBS_PER_HOUR = 10;
 const RATE_LIMIT_WINDOW_SEC = 3600; // 1 hour
@@ -33,18 +31,29 @@ async function isRateLimited(ip: string): Promise<boolean> {
 }
 
 /**
- * Sanitize YouTube URL - validate and normalize
+ * Extract video ID from various YouTube URL formats
+ */
+function extractVideoId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/|m\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})(?!\w)/,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+/**
+ * Sanitize YouTube URL - validate and normalize to standard format
  */
 function sanitizeYouTubeUrl(url: string): string | null {
-  if (!YOUTUBE_URL_REGEX.test(url)) return null;
+  const videoId = extractVideoId(url);
+  if (!videoId) return null;
   
-  try {
-    // Parse and normalize the URL
-    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
-    return parsed.toString();
-  } catch {
-    return null;
-  }
+  // Return normalized URL in standard format
+  return `https://www.youtube.com/watch?v=${videoId}`;
 }
 
 export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
