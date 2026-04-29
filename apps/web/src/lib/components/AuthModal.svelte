@@ -14,10 +14,14 @@
     if (!email || !password) return;
     loading = true;
     try {
-      await signIn.email({ email, password });
-      toast.success('Login successful!');
-      viewStore.closeAuthModal();
-      viewStore.toLanding();
+      const result = await signIn.email({ email, password });
+      if (result.error) {
+        toast.error(result.error.message || 'Login failed');
+      } else {
+        toast.success('Login successful!');
+        viewStore.closeAuthModal();
+        viewStore.toLanding();
+      }
     } catch (e: any) {
       toast.error(e.message || 'Login failed');
     } finally {
@@ -29,10 +33,14 @@
     if (!email || !password || !name) return;
     loading = true;
     try {
-      await signUp.email({ email, password, name });
-      toast.success('Account created!');
-      viewStore.closeAuthModal();
-      viewStore.toLanding();
+      const result = await signUp.email({ email, password, name });
+      if (result.error) {
+        toast.error(result.error.message || 'Registration failed');
+      } else {
+        toast.success('Account created!');
+        viewStore.closeAuthModal();
+        viewStore.toLanding();
+      }
     } catch (e: any) {
       toast.error(e.message || 'Registration failed');
     } finally {
