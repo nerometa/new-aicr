@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import ExperimentSetup from '$lib/components/ExperimentSetup.svelte';
   import { API_BASE } from '$lib/api';
   import { toast } from '$lib/toast';
