@@ -368,7 +368,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
     const header = [
       'experiment_name', 'experiment_description', 'experiment_status',
       'source_video_url', 'job_id', 'job_status', 'job_error',
-      'clip_name', 'virality_score', 'clip_preview_url', 'clip_export_url',
+      'clip_name', 'virality_score', 'virality_score_explanation', 'clip_preview_url', 'clip_export_url',
     ].map(csvEscape).join(',');
 
     const rows: string[] = [header];
@@ -379,7 +379,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
         csvEscape((experiment as any).description),
         csvEscape(experiment.status),
         csvEscape(experiment.sourceVideoUrl),
-        '', '', '', '', '', '', '',
+        '', '', '', '', '', '', '', '',
       ].join(','));
     }
 
@@ -394,7 +394,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
           csvEscape(job.id),
           csvEscape(job.status),
           csvEscape(job.errorMessage),
-          '', '', '', '',
+          '', '', '', '', '',
         ].join(','));
       } else {
         for (const clip of jobClips) {
@@ -408,6 +408,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
             csvEscape(job.errorMessage),
             csvEscape(clip.name),
             csvEscape(clip.viralityScore),
+            csvEscape((clip as any).viralityScoreExplanation),
             csvEscape(clip.previewUrl),
             csvEscape(clip.exportUrl),
           ].join(','));
