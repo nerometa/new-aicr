@@ -55,7 +55,7 @@ export interface KlapExport {
 export const isKlapConfigured = (): boolean => !!KEY && KEY.length > 0;
 
 // Unified request function - eliminates duplication between klapGet/klapPost
-async function klapRequest<T>(path: string, options?: RequestInit): Promise<T> {
+export async function klapRequest<T>(path: string, options?: RequestInit): Promise<T> {
   if (!isKlapConfigured()) {
     throw new Error('KLAP_API_KEY is not configured. Please add it to your .env file.');
   }

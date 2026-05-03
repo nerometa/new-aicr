@@ -61,6 +61,7 @@ export const jobs = sqliteTable('jobs', {
   id: text('id').primaryKey(),
   // userId is nullable - allows anonymous job creation
   userId: text('user_id').references(() => user.id),
+  experiment_id: text('experiment_id').references(() => experiments.id),
   youtubeUrl: text('youtube_url').notNull(),
   klapTaskId: text('klap_task_id'),
   klapFolderId: text('klap_folder_id'),
@@ -82,4 +83,16 @@ export const clips = sqliteTable('clips', {
   exportStatus: text('export_status'),
   exportUrl: text('export_url'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const experiments = sqliteTable('experiments', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id),
+  sourceVideoUrl: text('source_video_url').notNull(),
+  sourceVideoId: text('source_video_id').notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  status: text('status').notNull().default('pending'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });

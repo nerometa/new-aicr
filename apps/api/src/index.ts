@@ -5,13 +5,14 @@ import { auth } from './lib/auth';
 import { jobsRoute } from './routes/jobs';
 import { clipsRoute } from './routes/clips';
 import { exportsRoute } from './routes/exports';
+import { experimentsRoute } from './routes/experiments';
 import { startPoller } from './services/poller';
 import { env } from './env';
 
 const app = new Elysia()
   .use(cors({
     origin: env.CORS_ORIGIN,
-    credentials: true, // Allow cookies for auth
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }))
@@ -21,7 +22,10 @@ const app = new Elysia()
   .use(jobsRoute)
   .use(clipsRoute)
   .use(exportsRoute)
+  .use(experimentsRoute)
   .listen({ port: env.PORT, hostname: '0.0.0.0' });
 
 startPoller();
 console.log(`🦊 AICR API running on port ${env.PORT}`);
+export { app };
+export default app;
