@@ -124,7 +124,7 @@
   }
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="space-y-6 rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-6 shadow-sm">
+<form on:submit|preventDefault={handleSubmit} class="space-y-6 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6">
   <header class="flex items-center justify-between gap-4">
     <div>
       <p class="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Experiment setup</p>
@@ -137,42 +137,46 @@
   </header>
 
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-    <label class="space-y-1">
+    <label class="space-y-2">
       <span class="text-xs font-semibold text-[var(--fg)]">Video URL</span>
       <input
         type="url"
         value={videoUrl}
         on:input={(event) => (videoUrl = event.currentTarget.value)}
         required
-        class="block w-full rounded-2xl border border-[var(--border)] bg-white/60 px-3 py-2 text-sm text-[var(--fg)] placeholder:text-[var(--muted)] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+        aria-describedby="video-url-hint"
+        class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--fg)] placeholder:text-[var(--muted)] transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
       />
+      <span id="video-url-hint" class="text-xs text-[var(--muted)]">Paste a YouTube link</span>
     </label>
-    <label class="space-y-1">
+    <label class="space-y-2">
       <span class="text-xs font-semibold text-[var(--fg)]">Experiment name</span>
       <input
         type="text"
         value={name}
         on:input={(event) => (name = event.currentTarget.value)}
         required
-        class="block w-full rounded-2xl border border-[var(--border)] bg-white/60 px-3 py-2 text-sm text-[var(--fg)] placeholder:text-[var(--muted)] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+        aria-describedby="experiment-name-hint"
+        class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--fg)] placeholder:text-[var(--muted)] transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
       />
+      <span id="experiment-name-hint" class="text-xs text-[var(--muted)]">e.g. "Summer campaign test"</span>
     </label>
   </div>
 
-  <label class="space-y-1">
-    <span class="text-xs font-semibold text-[var(--fg)]">Description (optional)</span>
+  <label class="space-y-2">
+    <span class="text-xs font-semibold text-[var(--fg)]">Description <span class="font-normal text-[var(--muted)]">(optional)</span></span>
     <textarea
       rows="2"
       value={description}
       on:input={(event) => (description = event.currentTarget.value)}
       placeholder="What are you testing?"
-      class="block w-full rounded-2xl border border-[var(--border)] bg-white/60 px-3 py-2 text-sm text-[var(--fg)] placeholder:text-[var(--muted)] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+      class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--fg)] placeholder:text-[var(--muted)] transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
     ></textarea>
   </label>
 
   <div class="space-y-4">
-    {#each configs as config, index}
-      <article class="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
+    {#each configs as config, index (index)}
+      <article class="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-5 transition-colors duration-150">
         <div class="flex items-start justify-between gap-4">
           <div>
             <p class="text-sm font-semibold text-[var(--fg)]">Variant {index + 1}</p>
@@ -181,21 +185,22 @@
           <button
             type="button"
             on:click={() => removeConfig(index)}
-            class="text-xs font-semibold text-[var(--accent)] hover:text-[var(--accent)]/80"
+            class="text-xs font-semibold text-[var(--accent)] transition-colors duration-150 hover:text-[var(--accent)]/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
             disabled={configs.length === 1}
+            aria-label={`Remove variant ${index + 1}`}
           >
             Remove
           </button>
         </div>
 
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <label class="space-y-1 text-xs font-semibold text-[var(--fg)]">
+          <label class="space-y-2 text-xs font-semibold text-[var(--fg)]">
             <span>Duration (sec)</span>
             <input
               type="number"
               min="10"
               max="180"
-              class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--fg)] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--fg)] transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
               value={config.maxDuration ?? ''}
               on:input={(event) =>
                 setConfigValue(index, 'maxDuration',
@@ -203,13 +208,13 @@
               }
             />
           </label>
-          <label class="space-y-1 text-xs font-semibold text-[var(--fg)]">
+          <label class="space-y-2 text-xs font-semibold text-[var(--fg)]">
             <span>Max clips</span>
             <input
               type="number"
               min="1"
               max="10"
-              class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--fg)] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--fg)] transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
               value={config.maxClipCount ?? ''}
               on:input={(event) =>
                 setConfigValue(index, 'maxClipCount',
@@ -217,10 +222,10 @@
               }
             />
           </label>
-          <label class="space-y-1 text-xs font-semibold text-[var(--fg)]">
+          <label class="space-y-2 text-xs font-semibold text-[var(--fg)]">
             <span>Aspect ratio</span>
             <select
-              class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--fg)] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--fg)] transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
               value={config.aspectRatio}
               on:change={(event) => setConfigValue(index, 'aspectRatio', event.currentTarget.value)}
             >
@@ -231,35 +236,36 @@
           </label>
         </div>
 
-        <div class="grid gap-2 text-xs text-[var(--fg)] sm:grid-cols-3">
-          <label class="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
+        <fieldset class="grid gap-2 text-xs text-[var(--fg)] sm:grid-cols-3">
+          <legend class="sr-only">Editing options for variant {index + 1}</legend>
+          <label class="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 transition-colors duration-150 hover:border-[var(--accent)]/50 cursor-pointer">
             <input
               type="checkbox"
               checked={config.captions}
               on:change={(event) => setConfigValue(index, 'captions', event.currentTarget.checked)}
-              class="h-4 w-4 rounded border border-[var(--border)] bg-white text-[var(--accent)] focus:ring-[var(--accent)]"
+              class="h-4 w-4 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--accent)] focus:ring-[var(--accent)] focus:ring-offset-0 focus:ring-2 focus:ring-[var(--accent)]/30"
             />
-            Enable captions
+            <span class="text-sm">Captions</span>
           </label>
-          <label class="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
+          <label class="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 transition-colors duration-150 hover:border-[var(--accent)]/50 cursor-pointer">
             <input
               type="checkbox"
               checked={config.emojis}
               on:change={(event) => setConfigValue(index, 'emojis', event.currentTarget.checked)}
-              class="h-4 w-4 rounded border border-[var(--border)] bg-white text-[var(--accent)] focus:ring-[var(--accent)]"
+              class="h-4 w-4 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--accent)] focus:ring-[var(--accent)] focus:ring-offset-0 focus:ring-2 focus:ring-[var(--accent)]/30"
             />
-            Add emojis
+            <span class="text-sm">Emojis</span>
           </label>
-          <label class="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
+          <label class="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 transition-colors duration-150 hover:border-[var(--accent)]/50 cursor-pointer">
             <input
               type="checkbox"
               checked={config.removeSilences}
               on:change={(event) => setConfigValue(index, 'removeSilences', event.currentTarget.checked)}
-              class="h-4 w-4 rounded border border-[var(--border)] bg-white text-[var(--accent)] focus:ring-[var(--accent)]"
+              class="h-4 w-4 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--accent)] focus:ring-[var(--accent)] focus:ring-offset-0 focus:ring-2 focus:ring-[var(--accent)]/30"
             />
-            Remove silences
+            <span class="text-sm">Silences</span>
           </label>
-        </div>
+        </fieldset>
       </article>
     {/each}
   </div>
@@ -267,7 +273,7 @@
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <button
       type="button"
-      class="rounded-2xl border border-dashed border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--fg)] hover:bg-[var(--border)]"
+      class="inline-flex items-center justify-center rounded-2xl border border-dashed border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--fg)] transition-colors duration-150 hover:bg-[var(--surface-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]/30"
       on:click={addConfig}
     >
       + Add variant
@@ -276,13 +282,14 @@
   </div>
 
   {#if error}
-    <p class="text-xs text-red-600">{error}</p>
+    <p role="alert" class="text-xs text-red-600">{error}</p>
   {/if}
 
   <button
     type="submit"
-    class="w-full rounded-2xl border border-[var(--accent)] bg-[var(--accent)]/10 px-4 py-2 text-sm font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)]/20 disabled:cursor-not-allowed"
+    class="inline-flex w-full items-center justify-center rounded-2xl border border-[var(--accent)] bg-[var(--accent)]/10 px-5 py-3 text-sm font-semibold text-[var(--accent)] transition-colors duration-150 hover:bg-[var(--accent)]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]/30 disabled:cursor-not-allowed disabled:opacity-60"
     disabled={loading}
+    aria-busy={loading}
   >
     {loading ? 'Creating…' : 'Create experiment'}
   </button>
