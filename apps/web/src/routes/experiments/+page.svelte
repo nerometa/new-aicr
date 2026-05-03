@@ -4,7 +4,18 @@
   import { toast } from '$lib/toast';
 
   export let data;
-  let experiments = data?.experiments ?? [];
+  type ExperimentStatus = 'pending' | 'processing' | 'ready' | 'error';
+
+  type Experiment = {
+    id: string;
+    name: string;
+    description?: string | null;
+    status: ExperimentStatus;
+    sourceVideoUrl: string;
+    createdAt: string;
+  };
+
+  let experiments: Experiment[] = data?.experiments ?? [];
   let showSetup = false;
   let refreshing = false;
 
@@ -35,22 +46,19 @@
     },
   ];
 
-  const badgeClasses = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-gray-100 text-gray-800';
-      case 'processing':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'ready':
-        return 'bg-green-100 text-green-800';
-      case 'error':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-200 text-gray-700';
-    }
+  const badgePalette = {
+    pending: 'bg-[var(--border)] text-[var(--muted)]',
+    processing: 'bg-[var(--bg)] text-[var(--accent)] border border-[var(--border)]',
+    ready: 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/30',
+    error: 'bg-red-50 text-red-600 border border-red-100',
   };
 
-  const sectionItems = (status: string) => experiments.filter((exp) => exp.status === status);
+  const badgeClasses = (status: string) => {
+    return badgePalette[status as keyof typeof badgePalette] ??
+      'bg-[var(--border)] text-[var(--muted)]';
+  };
+
+  const sectionItems = (status: ExperimentStatus) => experiments.filter((exp) => exp.status === status);
 
   const formatDate = (value: string) => {
     try {
@@ -99,84 +107,114 @@
   }
 </script>
 
-<div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-  <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-    <div>
-      <h1 class="text-2xl font-semibold">Experiments</h1>
-      <p class="text-sm text-gray-600">Owner-only dashboard for Klap multi-configuration tests.</p>
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+    <section class="rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-6 space-y-4">
+      <div>
+        <p class="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Experiments overview</p>
+        <h1 class="text-3xl font-semibold text-[var(--fg)]">Organize clips with clarity</h1>
+        <p class="text-sm text-[var(--muted)]">
+          AICR keeps every Klap test within reach — set up new variants, monitor status, and download the clips you need.
+        </p>
+      </div>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {#each sections as section}
+          <div class="rounded-2xl border border-[var(--border)] bg-white/60 p-4">
+            <div class="flex items-center justify-between">
+              <p class="text-xs uppercase tracking-wide text-[var(--muted)]">{section.title}</p>
+              <span class={badgeClasses(section.status)}>{section.status}</span>
+            </div>
+            <p class="text-2xl font-semibold text-[var(--accent)] mt-2">
+              {sectionItems(section.status).length}
+            </p>
+            <p class="text-xs text-[var(--muted)] mt-1">{section.description}</p>
+          </div>
+        {/each}
+      </div>
+    </section>
+
+    <div class="flex flex-col gap-4 rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-6 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p class="text-sm font-semibold text-[var(--fg)]">Total experiments</p>
+        <p class="text-3xl font-bold text-[var(--accent)]">{experiments.length}</p>
+        <p class="text-xs text-[var(--muted)]">Refine what matters. No noise, no surprises.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button
+          type="button"
+          on:click={refreshExperiments}
+          class="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-semibold text-[var(--fg)] hover:bg-[var(--border)]"
+          disabled={refreshing}
+        >
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
+        <button
+          type="button"
+          on:click={() => (showSetup = !showSetup)}
+          class="px-4 py-2 rounded-xl border border-[var(--accent)] bg-[var(--accent)]/20 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/40"
+        >
+          {showSetup ? 'Hide form' : 'Create new experiment'}
+        </button>
+      </div>
     </div>
-    <div class="flex flex-wrap gap-2">
-      <button
-        type="button"
-        on:click={refreshExperiments}
-        class="px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
-        disabled={refreshing}
-      >
-        {refreshing ? 'Refreshing…' : 'Refresh'}
-      </button>
-      <button
-        type="button"
-        on:click={() => (showSetup = !showSetup)}
-        class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
-      >
-        {showSetup ? 'Hide form' : 'Create New Experiment'}
-      </button>
+
+    {#if showSetup}
+      <div class="rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-6">
+        <ExperimentSetup on:created={refreshExperiments} />
+      </div>
+    {/if}
+
+    {#if refreshing}
+      <div class="text-xs text-[var(--accent)]">Refreshing experiments…</div>
+    {/if}
+
+    <div class="space-y-6">
+      {#each sections as section}
+        <section class="rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-5">
+          <div class="flex flex-col gap-1 md:flex-row md:items-baseline md:justify-between">
+            <div>
+              <h2 class="text-xl font-semibold text-[var(--fg)]">{section.title}</h2>
+              <p class="text-xs text-[var(--muted)]">{section.description}</p>
+            </div>
+            <span class="text-xs text-[var(--muted)]">{sectionItems(section.status).length} total</span>
+          </div>
+          {#if sectionItems(section.status).length}
+            <div class="mt-4 grid gap-4 md:grid-cols-2">
+              {#each sectionItems(section.status) as exp (exp.id)}
+                <article class="space-y-3 rounded-2xl border border-[var(--border)] bg-white/60 p-4">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="space-y-1">
+                      <p class="text-sm font-semibold text-[var(--fg)]">{exp.name}</p>
+                      <p class="text-xs text-[var(--muted)]">{exp.description ?? 'No description'}</p>
+                    </div>
+                    <span class={"px-3 py-1 text-xs font-semibold rounded-full " + badgeClasses(exp.status)}>
+                      {exp.status}
+                    </span>
+                  </div>
+                  <p class="text-xs text-[var(--muted)]">
+                    Video:
+                    <a href={exp.sourceVideoUrl} target="_blank" rel="noreferrer" class="underline text-[var(--accent)]">
+                      Link
+                    </a>
+                  </p>
+                  <p class="text-xs text-[var(--muted)]">Created {formatDate(exp.createdAt)}</p>
+                  {#if exp.status === 'ready'}
+                    <button
+                      type="button"
+                      on:click={() => exportCsv(exp.id, exp.name)}
+                      class="inline-flex items-center gap-1 rounded-xl border border-[var(--accent)] bg-[var(--accent)]/10 px-4 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/20"
+                    >
+                      Export CSV
+                    </button>
+                  {/if}
+                </article>
+              {/each}
+            </div>
+          {:else}
+            <div class="mt-4 rounded-2xl border border-dashed border-[var(--border)] p-4 text-xs text-[var(--muted)]">
+              {section.emptyLabel}
+            </div>
+          {/if}
+        </section>
+      {/each}
     </div>
   </div>
-
-  {#if showSetup}
-    <div class="mb-8">
-      <ExperimentSetup on:created={refreshExperiments} />
-    </div>
-  {/if}
-
-  {#if refreshing}
-    <div class="text-xs text-blue-600">Refreshing experiments…</div>
-  {/if}
-
-  {#each sections as section}
-    <section class="space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-xl font-semibold">{section.title}</h2>
-          <p class="text-sm text-gray-500">{section.description}</p>
-        </div>
-        <span class="text-xs text-gray-500">{sectionItems(section.status).length} total</span>
-      </div>
-      {#if sectionItems(section.status).length}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {#each sectionItems(section.status) as exp (exp.id)}
-            <article class="border rounded-xl p-4 bg-white shadow-sm space-y-2">
-              <div class="flex items-baseline justify-between gap-3">
-                <div>
-                  <p class="font-semibold text-sm">{exp.name}</p>
-                  <p class="text-xs text-gray-500">{exp.description ?? 'No description'}</p>
-                </div>
-                <span class={"px-2 py-1 rounded-full text-xs font-semibold " + badgeClasses(exp.status)}>
-                  {exp.status}
-                </span>
-              </div>
-              <p class="text-xs text-gray-500">
-                Video: <a href={exp.sourceVideoUrl} target="_blank" rel="noreferrer" class="underline">Link</a>
-              </p>
-              <p class="text-xs text-gray-500">Created {formatDate(exp.createdAt)}</p>
-              {#if exp.status === 'ready'}
-                <button
-                  type="button"
-                  on:click={() => exportCsv(exp.id, exp.name)}
-                  class="mt-2 inline-flex items-center gap-1 rounded-md bg-green-600 px-3 py-1 text-xs font-semibold text-white hover:bg-green-700"
-                >
-                  Export CSV
-                </button>
-              {/if}
-            </article>
-          {/each}
-        </div>
-      {:else}
-        <div class="p-4 rounded-lg border border-dashed border-gray-200 text-xs text-gray-500">
-          {section.emptyLabel}
-        </div>
-      {/if}
-    </section>
-  {/each}
-</div>

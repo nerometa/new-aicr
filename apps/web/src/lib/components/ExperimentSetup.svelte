@@ -124,72 +124,78 @@
   }
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="p-6 bg-white rounded-lg shadow-md space-y-6">
-  <div class="flex items-center justify-between">
-    <h2 class="text-xl font-bold">Create New Experiment</h2>
-    <span class="text-sm text-gray-500">Variants: {configs.length}</span>
-  </div>
-
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<form on:submit|preventDefault={handleSubmit} class="space-y-6 rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-6 shadow-sm">
+  <header class="flex items-center justify-between gap-4">
     <div>
-      <label class="block text-sm font-medium text-gray-700">Video URL</label>
+      <p class="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Experiment setup</p>
+      <h2 class="text-2xl font-semibold text-[var(--fg)]">Create a new experiment</h2>
+      <p class="text-xs text-[var(--muted)]">Share a source video, define variants, and let Klap do the rest.</p>
+    </div>
+    <span class="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold text-[var(--accent)]">
+      Variants: {configs.length}
+    </span>
+  </header>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <label class="space-y-1">
+      <span class="text-xs font-semibold text-[var(--fg)]">Video URL</span>
       <input
         type="url"
         value={videoUrl}
         on:input={(event) => (videoUrl = event.currentTarget.value)}
         required
-        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+        class="block w-full rounded-2xl border border-[var(--border)] bg-white/60 px-3 py-2 text-sm text-[var(--fg)] placeholder:text-[var(--muted)] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
       />
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Experiment Name</label>
+    </label>
+    <label class="space-y-1">
+      <span class="text-xs font-semibold text-[var(--fg)]">Experiment name</span>
       <input
         type="text"
         value={name}
         on:input={(event) => (name = event.currentTarget.value)}
         required
-        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+        class="block w-full rounded-2xl border border-[var(--border)] bg-white/60 px-3 py-2 text-sm text-[var(--fg)] placeholder:text-[var(--muted)] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
       />
-    </div>
+    </label>
   </div>
 
-  <div>
-    <label class="block text-sm font-medium text-gray-700">Description (optional)</label>
+  <label class="space-y-1">
+    <span class="text-xs font-semibold text-[var(--fg)]">Description (optional)</span>
     <textarea
       rows="2"
       value={description}
       on:input={(event) => (description = event.currentTarget.value)}
-      class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
       placeholder="What are you testing?"
+      class="block w-full rounded-2xl border border-[var(--border)] bg-white/60 px-3 py-2 text-sm text-[var(--fg)] placeholder:text-[var(--muted)] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
     ></textarea>
-  </div>
+  </label>
 
   <div class="space-y-4">
     {#each configs as config, index}
-      <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
-        <div class="flex items-center justify-between mb-3">
+      <article class="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
+        <div class="flex items-start justify-between gap-4">
           <div>
-            <h3 class="text-sm font-semibold">Variant {index + 1}</h3>
-            <p class="text-xs text-gray-500">Adjust duration, clip count, and editing options.</p>
+            <p class="text-sm font-semibold text-[var(--fg)]">Variant {index + 1}</p>
+            <p class="text-xs text-[var(--muted)]">Customize duration, clips, and editing options.</p>
           </div>
           <button
             type="button"
             on:click={() => removeConfig(index)}
-            class="text-xs text-red-600 hover:text-red-800"
+            class="text-xs font-semibold text-[var(--accent)] hover:text-[var(--accent)]/80"
             disabled={configs.length === 1}
           >
             Remove
           </button>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <label class="block text-xs text-gray-700">
-            Duration (sec)
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <label class="space-y-1 text-xs font-semibold text-[var(--fg)]">
+            <span>Duration (sec)</span>
             <input
               type="number"
               min="10"
               max="180"
-              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--fg)] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               value={config.maxDuration ?? ''}
               on:input={(event) =>
                 setConfigValue(index, 'maxDuration',
@@ -197,14 +203,13 @@
               }
             />
           </label>
-
-          <label class="block text-xs text-gray-700">
-            Max Clips
+          <label class="space-y-1 text-xs font-semibold text-[var(--fg)]">
+            <span>Max clips</span>
             <input
               type="number"
               min="1"
               max="10"
-              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--fg)] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               value={config.maxClipCount ?? ''}
               on:input={(event) =>
                 setConfigValue(index, 'maxClipCount',
@@ -212,11 +217,10 @@
               }
             />
           </label>
-
-          <label class="block text-xs text-gray-700">
-            Aspect Ratio
+          <label class="space-y-1 text-xs font-semibold text-[var(--fg)]">
+            <span>Aspect ratio</span>
             <select
-              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--fg)] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               value={config.aspectRatio}
               on:change={(event) => setConfigValue(index, 'aspectRatio', event.currentTarget.value)}
             >
@@ -227,45 +231,48 @@
           </label>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 text-xs">
-          <label class="flex items-center gap-2">
+        <div class="grid gap-2 text-xs text-[var(--fg)] sm:grid-cols-3">
+          <label class="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
             <input
               type="checkbox"
               checked={config.captions}
               on:change={(event) => setConfigValue(index, 'captions', event.currentTarget.checked)}
+              class="h-4 w-4 rounded border border-[var(--border)] bg-white text-[var(--accent)] focus:ring-[var(--accent)]"
             />
             Enable captions
           </label>
-          <label class="flex items-center gap-2">
+          <label class="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
             <input
               type="checkbox"
               checked={config.emojis}
               on:change={(event) => setConfigValue(index, 'emojis', event.currentTarget.checked)}
+              class="h-4 w-4 rounded border border-[var(--border)] bg-white text-[var(--accent)] focus:ring-[var(--accent)]"
             />
             Add emojis
           </label>
-          <label class="flex items-center gap-2">
+          <label class="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
             <input
               type="checkbox"
               checked={config.removeSilences}
               on:change={(event) => setConfigValue(index, 'removeSilences', event.currentTarget.checked)}
+              class="h-4 w-4 rounded border border-[var(--border)] bg-white text-[var(--accent)] focus:ring-[var(--accent)]"
             />
             Remove silences
           </label>
         </div>
-      </div>
+      </article>
     {/each}
   </div>
 
-  <div class="flex gap-3">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <button
       type="button"
-      class="px-4 py-2 border border-dashed border-gray-400 rounded-md text-sm text-gray-700 hover:bg-gray-100"
+      class="rounded-2xl border border-dashed border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--fg)] hover:bg-[var(--border)]"
       on:click={addConfig}
     >
       + Add variant
     </button>
-    <span class="text-xs text-gray-500">Variants power Klap A/B jobs.</span>
+    <p class="text-xs text-[var(--muted)]">Variants power Klap multi-configuration jobs.</p>
   </div>
 
   {#if error}
@@ -274,9 +281,9 @@
 
   <button
     type="submit"
-    class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+    class="w-full rounded-2xl border border-[var(--accent)] bg-[var(--accent)]/10 px-4 py-2 text-sm font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)]/20 disabled:cursor-not-allowed"
     disabled={loading}
   >
-    {loading ? 'Creating...' : 'Create Experiment'}
+    {loading ? 'Creating…' : 'Create experiment'}
   </button>
 </form>
