@@ -1,26 +1,41 @@
 <script>
-// @ts-nocheck
   import ExperimentSetup from '$lib/components/ExperimentSetup.svelte';
   import { API_BASE } from '$lib/api';
-  // Data loaded by +page.ts
+  import { toast } from '$lib/toast';
+
   export let data;
-  $: experiments = data?.experiments ?? [];
+  let experiments = data?.experiments ?? [];
   let showSetup = false;
+  let refreshing = false;
 
-  const sectionFor = (status) => {
-    switch (status) {
-      case 'pending':
-        return 'Setup';
-      case 'processing':
-        return 'Running';
-      case 'ready':
-        return 'Results';
-      default:
-        return 'Other';
-    }
-  };
+  const sections = [
+    {
+      status: 'pending',
+      title: 'Setup',
+      description: 'Experiments queued for Klap to spin up.',
+      emptyLabel: 'No pending experiments',
+    },
+    {
+      status: 'processing',
+      title: 'Running',
+      description: 'Jobs currently being processed by Klap.',
+      emptyLabel: 'No experiments running',
+    },
+    {
+      status: 'ready',
+      title: 'Results',
+      description: 'Completed experiments with clips to review.',
+      emptyLabel: 'No completed experiments yet',
+    },
+    {
+      status: 'error',
+      title: 'Errors',
+      description: 'Experiments that failed to start.',
+      emptyLabel: 'No experiments in error state',
+    },
+  ];
 
-  const badgeClasses = (status) => {
+  const badgeClasses = (status: string) => {
     switch (status) {
       case 'pending':
         return 'bg-gray-100 text-gray-800';
@@ -28,12 +43,40 @@
         return 'bg-yellow-100 text-yellow-800';
       case 'ready':
         return 'bg-green-100 text-green-800';
+      case 'error':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-200 text-gray-700';
     }
   };
 
-  async function exportCsv(experimentId, experimentName) {
+  const sectionItems = (status: string) => experiments.filter((exp) => exp.status === status);
+
+  const formatDate = (value: string) => {
+    try {
+      return new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    } catch (error) {
+      return value;
+    }
+  };
+
+  async function refreshExperiments() {
+    refreshing = true;
+    try {
+      const response = await fetch(`${API_BASE}/api/experiments`, { credentials: 'include' });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error ?? 'Unable to refresh experiments');
+      }
+      experiments = await response.json();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Unable to refresh experiments');
+    } finally {
+      refreshing = false;
+    }
+  }
+
+  async function exportCsv(experimentId: string, experimentName: string) {
     try {
       const response = await fetch(`${API_BASE}/api/experiments/${experimentId}/export`, {
         credentials: 'include',
@@ -51,104 +94,89 @@
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Export failed:', err);
-      alert('Failed to export. Make sure you are logged in.');
+      toast.error('Failed to export. Make sure you are logged in.');
     }
   }
 </script>
 
-<div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-  <div class="flex items-center justify-between mb-4">
-    <h1 class="text-2xl font-semibold">Experiments</h1>
-    <button 
-      on:click={() => showSetup = !showSetup}
-      class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
-    >
-      {showSetup ? 'Cancel' : 'Create New Experiment'}
-    </button>
+<div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+  <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">Experiments</h1>
+      <p class="text-sm text-gray-600">Owner-only dashboard for Klap multi-configuration tests.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button
+        type="button"
+        on:click={refreshExperiments}
+        class="px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
+        disabled={refreshing}
+      >
+        {refreshing ? 'Refreshing…' : 'Refresh'}
+      </button>
+      <button
+        type="button"
+        on:click={() => (showSetup = !showSetup)}
+        class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+      >
+        {showSetup ? 'Hide form' : 'Create New Experiment'}
+      </button>
+    </div>
   </div>
 
   {#if showSetup}
-    <div class="mb-10">
-      <ExperimentSetup />
+    <div class="mb-8">
+      <ExperimentSetup on:created={refreshExperiments} />
     </div>
   {/if}
 
-  
-  <section aria-label="Setup" class="mb-10">
-    <h2 class="text-xl font-semibold mb-4">Setup</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {#each experiments.filter(e => e.status === 'pending') as exp}
-        <div class="border rounded-lg p-4 bg-white shadow-sm">
-          <div class="flex items-center justify-between mb-2">
-            <div class="font-semibold text-sm">{exp.name}</div>
-            <span class={"px-2 py-1 rounded text-xs " + badgeClasses('pending')}>Pending</span>
-          </div>
-          <div class="text-xs text-gray-600">{exp.description ?? 'No description'}</div>
-        </div>
-      {/each}
-      {#if experiments.filter(e => e.status === 'pending').length === 0}
-        <div class="col-span-1 sm:col-span-2 lg:col-span-3 p-4 border border-dashed rounded-lg text-gray-500">
-          No setup experiments
-        </div>
-      {/if}
-    </div>
-  </section>
+  {#if refreshing}
+    <div class="text-xs text-blue-600">Refreshing experiments…</div>
+  {/if}
 
-  
-  <section aria-label="Running" class="mb-10">
-    <h2 class="text-xl font-semibold mb-4">Running</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {#each experiments.filter(e => e.status === 'processing') as exp}
-        <div class="border rounded-lg p-4 bg-white shadow-sm">
-          <div class="flex items-center justify-between mb-2">
-            <div class="font-semibold text-sm">{exp.name}</div>
-            <span class={"px-2 py-1 rounded text-xs " + badgeClasses('processing')}>Processing</span>
-          </div>
-          <div class="text-xs text-gray-600">{exp.description ?? 'No description'}</div>
+  {#each sections as section}
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-semibold">{section.title}</h2>
+          <p class="text-sm text-gray-500">{section.description}</p>
         </div>
-      {/each}
-      {#if experiments.filter(e => e.status === 'processing').length === 0}
-        <div class="col-span-1 sm:col-span-2 lg:col-span-3 p-4 border border-dashed rounded-lg text-gray-500">
-          No running experiments
-        </div>
-      {/if}
-    </div>
-  </section>
-
-  
-  <section aria-label="Results" class="mb-10">
-    <h2 class="text-xl font-semibold mb-4">Results</h2>
-    {#each experiments.filter(e => e.status === 'ready') as exp}
-      <div class="border rounded-lg p-4 mb-4 bg-white shadow-sm">
-        <div class="flex items-center justify-between mb-2">
-          <div class="font-semibold text-sm">{exp.name}</div>
-          <div class="flex items-center gap-2">
-            <button
-              on:click={() => exportCsv(exp.id, exp.name)}
-              class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
-            >
-              Export CSV
-            </button>
-            <span class={"px-2 py-1 rounded text-xs " + badgeClasses('ready')}>Ready</span>
-          </div>
-        </div>
-        <div class="text-xs text-gray-600 mb-2">{exp.description ?? 'No description'}</div>
-        {#if exp.clips?.length}
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
-            {#each exp.clips as clip}
-              <a href={clip.url} target="_blank" rel="noreferrer" class="block p-2 border rounded hover:bg-gray-50">
-                {clip.title ?? 'Clip'}
-              </a>
-            {/each}
-          </div>
-        {:else}
-          <div class="text-xs text-gray-500">No clips available</div>
-        {/if}
+        <span class="text-xs text-gray-500">{sectionItems(section.status).length} total</span>
       </div>
-    {/each}
-    {#if experiments.filter(e => e.status === 'ready').length === 0}
-      <div class="p-4 border border-dashed rounded-lg text-gray-500">No completed experiments yet</div>
-    {/if}
-  </section>
-  
+      {#if sectionItems(section.status).length}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {#each sectionItems(section.status) as exp (exp.id)}
+            <article class="border rounded-xl p-4 bg-white shadow-sm space-y-2">
+              <div class="flex items-baseline justify-between gap-3">
+                <div>
+                  <p class="font-semibold text-sm">{exp.name}</p>
+                  <p class="text-xs text-gray-500">{exp.description ?? 'No description'}</p>
+                </div>
+                <span class={"px-2 py-1 rounded-full text-xs font-semibold " + badgeClasses(exp.status)}>
+                  {exp.status}
+                </span>
+              </div>
+              <p class="text-xs text-gray-500">
+                Video: <a href={exp.sourceVideoUrl} target="_blank" rel="noreferrer" class="underline">Link</a>
+              </p>
+              <p class="text-xs text-gray-500">Created {formatDate(exp.createdAt)}</p>
+              {#if exp.status === 'ready'}
+                <button
+                  type="button"
+                  on:click={() => exportCsv(exp.id, exp.name)}
+                  class="mt-2 inline-flex items-center gap-1 rounded-md bg-green-600 px-3 py-1 text-xs font-semibold text-white hover:bg-green-700"
+                >
+                  Export CSV
+                </button>
+              {/if}
+            </article>
+          {/each}
+        </div>
+      {:else}
+        <div class="p-4 rounded-lg border border-dashed border-gray-200 text-xs text-gray-500">
+          {section.emptyLabel}
+        </div>
+      {/if}
+    </section>
+  {/each}
 </div>
