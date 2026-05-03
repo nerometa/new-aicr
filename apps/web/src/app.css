@@ -8,6 +8,8 @@
     --accent: #FF6B4A;
     --border: #E7E5E4;
     --muted: #9CA3AF;
+    --surface: #f7f5f0;
+    --surface-muted: #f2f0ec;
 
     --radius-container: 24px;
     --radius-control: 12px;
@@ -20,6 +22,8 @@
     --accent: #FF6B4A;
     --border: #2a2a2a;
     --muted: #888888;
+    --surface: #161616;
+    --surface-muted: #1c1c1c;
   }
 
   body {

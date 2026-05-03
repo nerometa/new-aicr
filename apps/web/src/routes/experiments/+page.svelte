@@ -108,83 +108,102 @@
 </script>
 
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-    <section class="rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-6 space-y-4">
-      <div>
-        <p class="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Experiments overview</p>
-        <h1 class="text-3xl font-semibold text-[var(--fg)]">Organize clips with clarity</h1>
-        <p class="text-sm text-[var(--muted)]">
-          AICR keeps every Klap test within reach — set up new variants, monitor status, and download the clips you need.
-        </p>
-      </div>
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {#each sections as section}
-          <div class="rounded-2xl border border-[var(--border)] bg-white/60 p-4">
-            <div class="flex items-center justify-between">
-              <p class="text-xs uppercase tracking-wide text-[var(--muted)]">{section.title}</p>
-              <span class={badgeClasses(section.status)}>{section.status}</span>
-            </div>
-            <p class="text-2xl font-semibold text-[var(--accent)] mt-2">
-              {sectionItems(section.status).length}
-            </p>
-            <p class="text-xs text-[var(--muted)] mt-1">{section.description}</p>
+    <section class="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 space-y-6">
+      <div class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <div class="space-y-4">
+          <p class="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Experiments overview</p>
+          <h1 class="text-3xl font-semibold text-[var(--fg)]">Organize clips with clarity</h1>
+          <p class="text-sm text-[var(--muted)]">
+            AICR keeps every Klap test within reach — set up new variants, monitor status, and download the clips you need.
+          </p>
+          <div class="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+            {#each sections as section}
+              <span class="rounded-full border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-1">
+                {section.title}: {sectionItems(section.status).length}
+              </span>
+            {/each}
           </div>
-        {/each}
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          {#each sections as section}
+            <article class="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+              <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">
+                <span>{section.title}</span>
+                <span class={"px-3 py-1 text-xs font-semibold rounded-full " + badgeClasses(section.status)}>
+                  {section.status}
+                </span>
+              </div>
+              <p class="text-3xl font-bold text-[var(--accent)] mt-3">{sectionItems(section.status).length}</p>
+              <p class="text-xs text-[var(--muted)] mt-2">{section.description}</p>
+            </article>
+          {/each}
+        </div>
       </div>
     </section>
 
-    <div class="flex flex-col gap-4 rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-6 md:flex-row md:items-center md:justify-between">
-      <div>
+    <section class="flex flex-col gap-4 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 md:flex-row md:items-center md:justify-between md:gap-6">
+      <div class="space-y-1">
         <p class="text-sm font-semibold text-[var(--fg)]">Total experiments</p>
         <p class="text-3xl font-bold text-[var(--accent)]">{experiments.length}</p>
         <p class="text-xs text-[var(--muted)]">Refine what matters. No noise, no surprises.</p>
       </div>
-      <div class="flex flex-wrap gap-2">
+      <div class="flex flex-wrap gap-3">
         <button
           type="button"
           on:click={refreshExperiments}
-          class="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-semibold text-[var(--fg)] hover:bg-[var(--border)]"
-          disabled={refreshing}
+          class="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-[var(--border)] text-xs font-semibold text-[var(--fg)] transition-colors duration-150 hover:bg-[var(--surface-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]/30 disabled:opacity-60 disabled:pointer-events-none"
+          aria-label="Refresh experiments list"
+          aria-busy={refreshing}
         >
           {refreshing ? 'Refreshing…' : 'Refresh'}
         </button>
         <button
           type="button"
           on:click={() => (showSetup = !showSetup)}
-          class="px-4 py-2 rounded-xl border border-[var(--accent)] bg-[var(--accent)]/20 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/40"
+          class="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-[var(--accent)] bg-[var(--accent)]/10 text-xs font-semibold text-[var(--accent)] transition-colors duration-150 hover:bg-[var(--accent)]/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]/30"
+          aria-expanded={showSetup}
+          aria-controls="experiment-setup-panel"
         >
           {showSetup ? 'Hide form' : 'Create new experiment'}
         </button>
       </div>
-    </div>
+    </section>
 
     {#if showSetup}
-      <div class="rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-6">
+      <div id="experiment-setup-panel" class="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6">
         <ExperimentSetup on:created={refreshExperiments} />
       </div>
     {/if}
 
     {#if refreshing}
-      <div class="text-xs text-[var(--accent)]">Refreshing experiments…</div>
+      <div role="status" aria-live="polite" class="text-xs text-[var(--accent)]">
+        Refreshing experiments…
+      </div>
     {/if}
 
     <div class="space-y-6">
       {#each sections as section}
-        <section class="rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-5">
+        <section
+          class="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5"
+          aria-labelledby={`section-${section.status}`}
+        >
           <div class="flex flex-col gap-1 md:flex-row md:items-baseline md:justify-between">
             <div>
-              <h2 class="text-xl font-semibold text-[var(--fg)]">{section.title}</h2>
+              <h2 id={`section-${section.status}`} class="text-xl font-semibold text-[var(--fg)]">{section.title}</h2>
               <p class="text-xs text-[var(--muted)]">{section.description}</p>
             </div>
-            <span class="text-xs text-[var(--muted)]">{sectionItems(section.status).length} total</span>
+            <span class="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">{sectionItems(section.status).length} total</span>
           </div>
           {#if sectionItems(section.status).length}
             <div class="mt-4 grid gap-4 md:grid-cols-2">
               {#each sectionItems(section.status) as exp (exp.id)}
-                <article class="space-y-3 rounded-2xl border border-[var(--border)] bg-white/60 p-4">
+                <article
+                  class="space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4 transition-colors duration-150 hover:border-[var(--accent)]/60"
+                >
                   <div class="flex items-start justify-between gap-3">
                     <div class="space-y-1">
                       <p class="text-sm font-semibold text-[var(--fg)]">{exp.name}</p>
-                      <p class="text-xs text-[var(--muted)]">{exp.description ?? 'No description'}</p>
+                      <p class="text-xs text-[var(--muted)]">{exp.description ?? 'No description yet'}</p>
                     </div>
                     <span class={"px-3 py-1 text-xs font-semibold rounded-full " + badgeClasses(exp.status)}>
                       {exp.status}
@@ -192,8 +211,14 @@
                   </div>
                   <p class="text-xs text-[var(--muted)]">
                     Video:
-                    <a href={exp.sourceVideoUrl} target="_blank" rel="noreferrer" class="underline text-[var(--accent)]">
-                      Link
+                    <a
+                      href={exp.sourceVideoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      class="underline text-[var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]/30"
+                      aria-label={`Open source video for ${exp.name}`}
+                    >
+                      Open video
                     </a>
                   </p>
                   <p class="text-xs text-[var(--muted)]">Created {formatDate(exp.createdAt)}</p>
@@ -201,7 +226,8 @@
                     <button
                       type="button"
                       on:click={() => exportCsv(exp.id, exp.name)}
-                      class="inline-flex items-center gap-1 rounded-xl border border-[var(--accent)] bg-[var(--accent)]/10 px-4 py-1 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/20"
+                      class="inline-flex items-center gap-1 rounded-xl border border-[var(--accent)] bg-[var(--accent)]/10 px-4 py-2 text-xs font-semibold text-[var(--accent)] transition-colors duration-150 hover:bg-[var(--accent)]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]/30"
+                      aria-label={`Export clips for ${exp.name} as CSV`}
                     >
                       Export CSV
                     </button>
