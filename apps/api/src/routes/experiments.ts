@@ -192,14 +192,27 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
     }
 
     const results = await db.select().from(experiments);
-    return (results as any[]).map(e => ({
-      id: e.id,
-      name: e.name,
-      description: e.description,
-      status: e.status,
-      sourceVideoUrl: e.sourceVideoUrl,
-      createdAt: e.createdAt,
+    const experimentsWithStatus = await Promise.all((results as any[]).map(async (e) => {
+      const relatedJobs = await db.select().from(jobs).where(eq(jobs.experiment_id, e.id));
+      const jobStatuses = new Set(relatedJobs.map(j => j.status));
+      let computedStatus = e.status;
+      if (jobStatuses.has('error')) {
+        computedStatus = 'error';
+      } else if (jobStatuses.has('ready') && !jobStatuses.has('pending') && !jobStatuses.has('processing')) {
+        computedStatus = 'ready';
+      } else if (jobStatuses.has('processing') || jobStatuses.has('pending')) {
+        computedStatus = 'processing';
+      }
+      return {
+        id: e.id,
+        name: e.name,
+        description: e.description,
+        status: computedStatus,
+        sourceVideoUrl: e.sourceVideoUrl,
+        createdAt: e.createdAt,
+      };
     }));
+    return experimentsWithStatus;
   })
   .get('/:id', async ({ params, request, set }) => {
     // Authorization: ensure the request is from the owner
@@ -253,6 +266,16 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
       }
     }
 
+    const jobStatuses = new Set(relatedJobs.map(j => j.status));
+    let computedStatus = experiment.status;
+    if (jobStatuses.has('error')) {
+      computedStatus = 'error';
+    } else if (jobStatuses.has('ready') && !jobStatuses.has('pending') && !jobStatuses.has('processing')) {
+      computedStatus = 'ready';
+    } else if (jobStatuses.has('processing') || jobStatuses.has('pending')) {
+      computedStatus = 'processing';
+    }
+
     const jobsWithClips = relatedJobs.map(job => ({
       ...job,
       clips: clipsByJobId[job.id] ?? [],
@@ -260,6 +283,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
 
     return {
       ...experiment,
+      status: computedStatus,
       jobs: jobsWithClips,
     };
   }, {
