@@ -179,9 +179,9 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
     },
   })
   .get('/', async ({ request, set }) => {
-  
+    let authenticatedUserId: string;
     try {
-      await requireOwner(request.headers);
+      authenticatedUserId = await requireOwner(request.headers);
     } catch (error) {
       if (error instanceof Error && error.message === 'Forbidden') {
         set.status = 403;
@@ -191,7 +191,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
       return { error: 'Unauthorized' };
     }
 
-    const results = await db.select().from(experiments);
+    const results = await db.select().from(experiments).where(eq(experiments.userId, authenticatedUserId));
     const experimentsWithStatus = await Promise.all((results as any[]).map(async (e) => {
       const relatedJobs = await db.select().from(jobs).where(eq(jobs.experiment_id, e.id));
       const jobStatuses = new Set(relatedJobs.map(j => j.status));

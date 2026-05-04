@@ -9,6 +9,8 @@ import { experimentsRoute } from './routes/experiments';
 import { startPoller } from './services/poller';
 import { env } from './env';
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 const app = new Elysia()
   .use(cors({
     origin: env.CORS_ORIGIN,
@@ -16,7 +18,7 @@ const app = new Elysia()
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }))
-  .use(swagger({ path: '/docs' }))
+  .use(isDev ? swagger({ path: '/docs' }) : false)
   .get('/api/health', () => ({ status: 'ok', timestamp: new Date().toISOString() }))
   .all('/api/auth/*', ({ request }) => auth.handler(request))
   .use(jobsRoute)
