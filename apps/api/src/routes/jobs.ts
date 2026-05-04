@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { db } from '../db/client';
-import { jobs, user } from '../db/schema';
+import { jobs, user, clips } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { createVideoTask, createManagedUser, isKlapConfigured } from '../services/klap';
 import { auth } from '../lib/auth';
@@ -155,9 +155,33 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
   const embedUrl = jobClips.length > 0 ? jobClips[0].embedUrl : null;
   return { id: job.id, status: job.status, youtubeUrl: job.youtubeUrl, errorMessage: job.errorMessage, embedUrl };
 })
-  .get('/', async () => {
-    const allJobs = await db.select().from(jobs);
-    return allJobs.map(j => ({ id: j.id, status: j.status, youtubeUrl: j.youtubeUrl }));
+  .get('/', async ({ request, set }) => {
+    // Require authentication - return only user's own jobs
+    let dbUserId: string | null = null;
+    
+    try {
+      const api: any = (auth as any).api;
+      if (api && typeof api.getSession === 'function') {
+        const session: any = await api.getSession({ headers: request.headers as any });
+        if (session?.user?.id) {
+          const results = await db.select().from(user).where(eq(user.id, session.user.id));
+          const found: any[] = results as any;
+          if (found && found.length > 0) {
+            dbUserId = found[0].id;
+          }
+        }
+      }
+    } catch (e) {
+      // Non-fatal: proceed as anonymous (will return empty)
+    }
+
+    if (!dbUserId) {
+      set.status = 401;
+      return { error: 'Unauthorized', message: 'Authentication required to view jobs' };
+    }
+
+    const userJobs = await db.select().from(jobs).where(eq(jobs.userId, dbUserId));
+    return userJobs.map(j => ({ id: j.id, status: j.status, youtubeUrl: j.youtubeUrl }));
   })
   .get('/sse/:jobId', ({ params, set, signal }) => {
     set.headers['Content-Type'] = 'text/event-stream';
