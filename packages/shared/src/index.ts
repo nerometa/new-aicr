@@ -24,6 +24,7 @@ export interface Clip {
   viralityScore: number | null;
   viralityScoreExplanation: string | null;
   previewUrl: string | null;
+  embedUrl: string | null;
   exportStatus: ExportStatus | null;
   exportUrl: string | null;
   createdAt: Date;
@@ -45,6 +46,7 @@ export interface ClipResponse {
   name: string | null;
   viralityScore: number | null;
   previewUrl: string | null;
+  embedUrl: string | null;
   exportStatus: ExportStatus | null;
   exportUrl: string | null;
 }

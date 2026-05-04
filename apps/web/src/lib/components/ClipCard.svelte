@@ -16,7 +16,7 @@
 
 <div class="border border-[var(--border)] rounded-xl shadow-sm flex flex-col overflow-hidden">
   <a
-    href={clip.previewUrl}
+    href={clip.embedUrl ?? clip.previewUrl}
     target="_blank"
     rel="noopener noreferrer"
     class="block bg-gray-100 aspect-[9/16] flex flex-col items-center justify-center hover:bg-gray-200 transition-colors"
