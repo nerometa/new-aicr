@@ -7,6 +7,7 @@ import { auth } from '../lib/auth';
 import { enqueueJob } from '../services/poller';
 import { randomUUID } from 'crypto';
 import { redis } from '../lib/redis';
+import { sanitizeYouTubeUrl } from '../lib/youtube';
 
 // Constants
 const RATE_LIMIT_JOBS_PER_HOUR = 10;
@@ -31,31 +32,6 @@ async function isRateLimited(ip: string): Promise<boolean> {
   return count > RATE_LIMIT_JOBS_PER_HOUR;
 }
 
-/**
- * Extract video ID from various YouTube URL formats
- */
-function extractVideoId(url: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/|m\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})(?!\w)/,
-  ];
-  
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  return null;
-}
-
-/**
- * Sanitize YouTube URL - validate and normalize to standard format
- */
-function sanitizeYouTubeUrl(url: string): string | null {
-  const videoId = extractVideoId(url);
-  if (!videoId) return null;
-  
-  // Return normalized URL in standard format
-  return `https://www.youtube.com/watch?v=${videoId}`;
-}
 
 export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
   .post('/', async ({ body, set, request }) => {

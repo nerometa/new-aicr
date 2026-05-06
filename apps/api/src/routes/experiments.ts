@@ -8,6 +8,7 @@ import { auth } from '../lib/auth';
 import { env } from '../env';
 import { CreateExperimentRequest, Configuration } from '../schemas/experiments';
 import { eq, inArray } from 'drizzle-orm';
+import { extractVideoId, sanitizeYouTubeUrl } from '../lib/youtube';
 
 type ConfigType = Static<typeof Configuration>;
 type CreateExperimentBody = Static<typeof CreateExperimentRequest>;
@@ -34,22 +35,6 @@ function createVideoTaskWithConfig(sourceUrl: string, config: ConfigType): Promi
   });
 }
 
-const YOUTUBE_PATTERNS = [
-  /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/|m\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})(?!\w)/,
-];
-
-function extractVideoId(url: string): string | null {
-  for (const pattern of YOUTUBE_PATTERNS) {
-    const match = url.match(pattern);
-    if (match && match[1]) return match[1];
-  }
-  return null;
-}
-
-function sanitizeYouTubeUrl(url: string): string | null {
-  const videoId = extractVideoId(url);
-  return videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
-}
 
 async function requireOwner(headers: Headers): Promise<string> {
   const api = (auth as any).api;

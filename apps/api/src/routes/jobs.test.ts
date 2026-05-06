@@ -1,32 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-
-/**
- * Extract video ID from various YouTube URL formats
- */
-function extractVideoId(url: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|youtube\.com\/live\/|m\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})(?!\w)/,
-  ];
-  
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  return null;
-}
-
-/**
- * Sanitize YouTube URL - validate and normalize to standard format
- */
-function sanitizeYouTubeUrl(url: string): string | null {
-  const videoId = extractVideoId(url);
-  if (!videoId) return null;
-  
-  // Return normalized URL in standard format
-  return `https://www.youtube.com/watch?v=${videoId}`;
-}
-
-const isValidYouTubeUrl = (url: string): boolean => sanitizeYouTubeUrl(url) !== null;
+import { extractVideoId, sanitizeYouTubeUrl, isValidYouTubeUrl } from '../lib/youtube';
 
 describe('YouTube URL validation', () => {
   describe('valid URLs', () => {
