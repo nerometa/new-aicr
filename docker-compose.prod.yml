@@ -8,6 +8,7 @@
 #   VITE_API_URL    - Backend URL for frontend (e.g., https://api.aicr.example.com)
 #   BETTER_AUTH_URL - Public URL of this API (same as VITE_API_URL)
 #   REAP_API_KEY    - Reap AI video clipping API key
+#   REKA_API_KEY    - Reka Vision API key
 version: '3.9'
 
 services:
@@ -26,6 +27,7 @@ services:
       - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL}
       - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN}
       - REAP_API_KEY=${REAP_API_KEY}
+      - REKA_API_KEY=${REKA_API_KEY}
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - BETTER_AUTH_URL=${BETTER_AUTH_URL}
       - CORS_ORIGIN=${CORS_ORIGIN}
