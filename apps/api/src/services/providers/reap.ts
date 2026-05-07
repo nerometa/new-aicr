@@ -3,7 +3,6 @@ import type { ClipProvider, ClipConfig, ProviderClip } from './types';
 
 const BASE = 'https://public.reap.video/api/v1/automation';
 const TIMEOUT_MS = 30_000;
-const MAX_CLIPS = 3;
 
 // ─── Default config ──────────────────────────────────────────────────────────
 // Baked in as a const — not env vars, not DB config.
@@ -147,12 +146,9 @@ async function getClips(providerProjectId: string): Promise<ProviderClip[]> {
     `/get-project-clips?projectId=${encodeURIComponent(providerProjectId)}&pageSize=50`,
   );
 
-  // Cap at MAX_CLIPS, sorted by virality descending
-  const sorted = [...res.clips].sort(
+  return [...res.clips].sort(
     (a, b) => (b.viralityScore ?? 0) - (a.viralityScore ?? 0),
-  );
-
-  return sorted.slice(0, MAX_CLIPS).map((c) => ({
+  ).map((c) => ({
     providerClipId: c.id,
     title: c.title ?? null,
     viralityScore: c.viralityScore ?? null,

@@ -22,7 +22,7 @@ The contract every AI video clipper adapter must implement:
 The metadata a provider returns at completion, safe to persist: `{ providerClipId, title, viralityScore, duration, startTime, endTime }`. No URLs.
 
 ### Default Clip Config
-The baseline parameters used for every job submitted via the main flow (not experiments). Defined as a `const` in the Reap adapter — not in environment variables. Current defaults: 30s clips, portrait 9:16, 1080p, captions on, emojis off, results trimmed to 3 clips.
+The baseline parameters used for every job submitted via the main flow (not experiments). Defined as a `const` in the Reap adapter — not in environment variables. Current defaults: 30s clips, portrait 9:16, 1080p, captions on, emojis off. All clips Reap generates are returned, sorted by virality score descending.
 
 ### Experiment
 An owner-only A/B testing run: one source video submitted with multiple `Configuration` variations. Each variation becomes a Job. Results (virality scores per clip) are compared across configurations.
@@ -47,5 +47,4 @@ A push notification from the provider (Reap) when a project reaches a final stat
 - Clip URLs are never stored in the database.
 - Provider-specific identifiers (`klapTaskId`, `klapFolderId`, etc.) do not appear in domain tables or API responses.
 - The `Configuration` schema only contains fields every current provider can honour. Silent no-ops are not permitted.
-- The Reap adapter trims clip results to 3 after fetching — this is adapter behaviour, not a domain rule.
 - Projects on Reap expire after 60 days (Creator) or 120 days (Studio). After expiry, `getClipUrls` will fail gracefully — the API must surface this to the caller, not silently return empty.

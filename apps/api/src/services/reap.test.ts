@@ -151,7 +151,7 @@ describe('Reap adapter - getClips', () => {
     }
   });
 
-  it('caps results at 3 clips sorted by virality descending', async () => {
+  it('returns all clips sorted by virality descending (no cap)', async () => {
     const originalFetch = globalThis.fetch;
     const mockClips = [1, 2, 3, 4, 5].map(n => ({
       id: `clip_00${n}`,
@@ -162,7 +162,7 @@ describe('Reap adapter - getClips', () => {
       duration: 30,
       title: `Clip ${n}`,
       caption: null,
-      viralityScore: n, // 1..5, ascending — adapter should pick 5,4,3
+      viralityScore: n, // 1..5, ascending — adapter should return all sorted desc
       createdAt: 1700000000,
       updatedAt: 1700000000,
     }));
@@ -176,10 +176,12 @@ describe('Reap adapter - getClips', () => {
     try {
       const { reapProvider } = await import('./providers/reap');
       const clips = await reapProvider.getClips('proj_001');
-      expect(clips).toHaveLength(3);
+      expect(clips).toHaveLength(5);
       expect(clips[0]!.viralityScore).toBe(5);
       expect(clips[1]!.viralityScore).toBe(4);
       expect(clips[2]!.viralityScore).toBe(3);
+      expect(clips[3]!.viralityScore).toBe(2);
+      expect(clips[4]!.viralityScore).toBe(1);
     } finally {
       (globalThis as any).fetch = originalFetch;
     }
