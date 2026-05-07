@@ -23,13 +23,13 @@
     {
       status: 'pending',
       title: 'Setup',
-      description: 'Experiments queued for Klap to spin up.',
+      description: 'Experiments queued for processing.',
       emptyLabel: 'No pending experiments',
     },
     {
       status: 'processing',
       title: 'Running',
-      description: 'Jobs currently being processed by Klap.',
+      description: 'Jobs currently being processed.',
       emptyLabel: 'No experiments running',
     },
     {
@@ -114,7 +114,7 @@
           <p class="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Experiments overview</p>
           <h1 class="text-3xl font-semibold text-[var(--fg)]">Organize clips with clarity</h1>
           <p class="text-sm text-[var(--muted)]">
-            AICR keeps every Klap test within reach — set up new variants, monitor status, and download the clips you need.
+            AICR keeps every AI clipping test within reach — set up new variants, monitor status, and download the clips you need.
           </p>
           <div class="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
             {#each sections as section}

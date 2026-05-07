@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "reap": {
+      "source": "docs.reap.video",
+      "sourceType": "well-known",
+      "computedHash": "b5b68d792fa775fedca62fb67675ec3eb7688fc4eba8dd8f423d78d1e278d64f"
+    }
+  }
+}

@@ -4,7 +4,7 @@ import { swagger } from '@elysiajs/swagger';
 import { auth } from './lib/auth';
 import { jobsRoute } from './routes/jobs';
 import { clipsRoute } from './routes/clips';
-import { exportsRoute } from './routes/exports';
+import { webhooksRoute } from './routes/webhooks';
 import { experimentsRoute } from './routes/experiments';
 import { startPoller } from './services/poller';
 import { env } from './env';
@@ -23,7 +23,7 @@ const app = new Elysia()
   .all('/api/auth/*', ({ request }) => auth.handler(request))
   .use(jobsRoute)
   .use(clipsRoute)
-  .use(exportsRoute)
+  .use(webhooksRoute)
   .use(experimentsRoute)
   .listen({ port: env.PORT, hostname: '0.0.0.0' });
 

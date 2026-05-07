@@ -158,3 +158,17 @@ embedUrl: text('embed_url') // nullable
 - One managed user per AICR user (lazy creation on first job)
 - Anonymous jobs continue to work without embed URLs
 - Graceful degradation if managed user creation fails
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical labels: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: `CONTEXT.md` at root + `docs/adr/`. See `docs/agents/domain.md`.

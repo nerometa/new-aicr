@@ -2,12 +2,12 @@
 # Usage: docker compose -f docker-compose.prod.yml up -d
 #
 # Required environment variables (create .env file):
-#   API_PORT      - Backend port (default: 3000)
-#   WEB_PORT      - Frontend port (default: 3001)
-#   CORS_ORIGIN   - Frontend URL for CORS (e.g., https://aicr.example.com)
-#   VITE_API_URL  - Backend URL for frontend (e.g., https://api.aicr.example.com)
+#   API_PORT        - Backend port (default: 3000)
+#   WEB_PORT        - Frontend port (default: 3001)
+#   CORS_ORIGIN     - Frontend URL for CORS (e.g., https://aicr.example.com)
+#   VITE_API_URL    - Backend URL for frontend (e.g., https://api.aicr.example.com)
 #   BETTER_AUTH_URL - Public URL of this API (same as VITE_API_URL)
-
+#   REAP_API_KEY    - Reap AI video clipping API key
 version: '3.9'
 
 services:
@@ -25,8 +25,7 @@ services:
       - DATABASE_AUTH_TOKEN=${DATABASE_AUTH_TOKEN}
       - UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL}
       - UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN}
-      - KLAP_API_KEY=${KLAP_API_KEY}
-      - KLAP_API_URL=${KLAP_API_URL:-https://api.klap.app/v2}
+      - REAP_API_KEY=${REAP_API_KEY}
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - BETTER_AUTH_URL=${BETTER_AUTH_URL}
       - CORS_ORIGIN=${CORS_ORIGIN}

@@ -94,7 +94,7 @@
     
     {#if $jobStore.status === 'processing'}
       <span class="font-bold uppercase text-sm text-yellow-500">Processing</span>
-      <span class="text-xs text-[var(--muted)] animate-pulse ml-2">Klap is analyzing your video...</span>
+      <span class="text-xs text-[var(--muted)] animate-pulse ml-2">Analyzing your video...</span>
     {:else if $jobStore.status === 'error'}
       <span class="font-bold uppercase text-sm text-red-500">Error</span>
       <span class="text-xs text-red-500 ml-2">{$jobStore.error || 'Processing failed'}</span>

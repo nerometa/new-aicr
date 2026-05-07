@@ -1,13 +1,12 @@
 import { redis } from '../lib/redis';
 import { db } from '../db/client';
-import { jobs, clips, user } from '../db/schema';
+import { jobs, clips } from '../db/schema';
 import { eq } from 'drizzle-orm';
-import { getTask, getProjects, previewUrl, generateAccessToken, embedUrl } from './klap';
-import type { KlapProject, KlapTask } from './klap';
+import { provider } from './providers';
+import { randomUUID } from 'crypto';
 
-// Constants
 const QUEUE_KEY = 'aicr:polling_jobs';
-const POLL_INTERVAL_MS = 30_000; // Poll Klap every 30 seconds
+const POLL_INTERVAL_MS = 30_000;
 
 export const enqueueJob = (jobId: string) => redis.sadd(QUEUE_KEY, jobId);
 
@@ -20,82 +19,64 @@ export const startPoller = () => {
   }, POLL_INTERVAL_MS);
 };
 
-const pollJob = async (jobId: string) => {
+export const processCompletedJob = async (jobId: string): Promise<void> => {
+  const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId));
+  if (!job?.providerProjectId) {
+    console.error(`[Poller] Job ${jobId} has no providerProjectId`);
+    return;
+  }
+
+  const providerClips = await provider.getClips(job.providerProjectId);
+
+  await db.update(jobs)
+    .set({ status: 'ready', updatedAt: new Date() })
+    .where(eq(jobs.id, jobId));
+
+  for (const c of providerClips) {
+    await db.insert(clips).values({
+      id: randomUUID(),
+      jobId,
+      providerClipId: c.providerClipId,
+      title: c.title,
+      viralityScore: c.viralityScore,
+      viralityScoreExplanation: c.viralityScoreExplanation,
+      duration: c.duration,
+      startTime: c.startTime,
+      endTime: c.endTime,
+      createdAt: new Date(),
+    }).onConflictDoNothing();
+  }
+
+  console.log(`[Poller] Job ${jobId} completed with ${providerClips.length} clips`);
+  await redis.srem(QUEUE_KEY, jobId);
+};
+
+const pollJob = async (jobId: string): Promise<void> => {
   try {
     const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId));
-    if (!job?.klapTaskId) {
-      console.log(`[Poller] Job ${jobId} has no klapTaskId, removing from queue`);
+    if (!job?.providerProjectId) {
+      console.log(`[Poller] Job ${jobId} has no providerProjectId, removing from queue`);
       await redis.srem(QUEUE_KEY, jobId);
       return;
     }
 
-    const task: KlapTask = await getTask(job.klapTaskId);
+    const status = await provider.getProjectStatus(job.providerProjectId);
 
-    // Klap status: "processing" | "ready" | "error"
-    if (task.status === 'processing') return;
+    if (status === 'processing') return;
 
-    if (task.status === 'error') {
-      console.error(`[Poller] Job ${jobId} failed: ${task.error}`);
-      await db.update(jobs).set({ 
-        status: 'error', 
-        errorMessage: task.error || 'Klap processing failed' 
-      }).where(eq(jobs.id, jobId));
+    if (status === 'failed') {
+      console.error(`[Poller] Job ${jobId} failed`);
+      await db.update(jobs)
+        .set({ status: 'error', errorMessage: 'Provider processing failed', updatedAt: new Date() })
+        .where(eq(jobs.id, jobId));
       await redis.srem(QUEUE_KEY, jobId);
       return;
     }
 
-    // task.status === 'ready'
-    const folderId = task.output_id;
-    if (!folderId) {
-      console.error(`[Poller] Job ${jobId} has no folderId`);
-      await redis.srem(QUEUE_KEY, jobId);
-      return;
-    }
-    
-    const projects: KlapProject[] = await getProjects(folderId);
-
-    // Use 'ready' to match Klap API terminology
-    await db.update(jobs).set({ 
-      status: 'ready', 
-      klapFolderId: folderId, 
-      updatedAt: new Date() 
-    }).where(eq(jobs.id, jobId));
-
-    // Prepare optional access token for embedding clips (authenticated jobs only)
-    let accessToken: string | null = null;
-    try {
-      if (job.userId) {
-        const [u] = await db.select().from(user).where(eq(user.id, job.userId));
-        const klapManagedUserId = (u as any)?.klapManagedUserId;
-        if (klapManagedUserId) {
-          const token: any = await generateAccessToken(klapManagedUserId);
-          accessToken = token?.external_access_token ?? null;
-        }
-      }
-    } catch (err) {
-      console.error('[Poller] Failed to generate embed access token:', err);
-      accessToken = null;
-    }
-
-    for (const p of projects) {
-      const embed = accessToken ? embedUrl(p.id, accessToken) : null;
-      await db.insert(clips).values({
-        id: p.id,
-        jobId,
-        klapFolderId: folderId,
-        name: p.name,
-        viralityScore: p.virality_score,
-        viralityScoreExplanation: p.virality_score_explanation,
-        previewUrl: previewUrl(p.id),
-        embedUrl: embed,
-        createdAt: new Date(),
-      }).onConflictDoNothing();
-    }
-
-    console.log(`[Poller] Job ${jobId} completed with ${projects.length} clips`);
-    await redis.srem(QUEUE_KEY, jobId);
+    // status === 'completed'
+    await processCompletedJob(jobId);
   } catch (error) {
     console.error(`[Poller] Error for job ${jobId}:`, error);
-    await redis.srem(QUEUE_KEY, jobId);
+    // Don't remove from queue — retry next cycle
   }
 };

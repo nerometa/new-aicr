@@ -5,10 +5,7 @@ const mockEnv = {
   DATABASE_AUTH_TOKEN: 'test-token',
   UPSTASH_REDIS_REST_URL: 'https://test.upstash.io',
   UPSTASH_REDIS_REST_TOKEN: 'test-token',
-  KLAP_API_KEY: 'test-api-key',
-  KLAP_API_URL: 'https://api.klap.app/v2',
-  KLAP_MAX_DURATION: 30,
-  KLAP_MAX_CLIP_COUNT: 3,
+  REAP_API_KEY: 'test-api-key',
   BETTER_AUTH_SECRET: 'test-secret-key-at-least-32-characters-long',
   BETTER_AUTH_URL: 'http://localhost:3000',
   CORS_ORIGIN: 'http://localhost:5173',
@@ -152,16 +149,16 @@ describe('experiments route authorization checks (isolated)', () => {
       expect(Array.isArray(validBody.configurations)).toBe(true);
     });
 
-    it('validates configuration max_duration bounds', () => {
-      const config = { max_duration: 200 };
-      const isValidDuration = config.max_duration >= 1 && config.max_duration <= 180;
-      expect(isValidDuration).toBe(false);
+    it('validates clipDuration is one of 30, 60, 90', () => {
+      const valid = [30, 60, 90];
+      expect(valid.includes(30)).toBe(true);
+      expect(valid.includes(45 as any)).toBe(false);
     });
 
-    it('validates configuration max_clip_count bounds', () => {
-      const config = { max_clip_count: 15 };
-      const isValidCount = config.max_clip_count >= 1 && config.max_clip_count <= 10;
-      expect(isValidCount).toBe(false);
+    it('validates orientation values', () => {
+      const valid = ['portrait', 'landscape', 'square'];
+      expect(valid.includes('portrait')).toBe(true);
+      expect(valid.includes('diagonal' as any)).toBe(false);
     });
   });
 });
@@ -240,61 +237,17 @@ describe('experiments route CRUD operations (isolated)', () => {
   });
 });
 
-describe('POST /api/experiments request construction', () => {
-  describe('Klap task body building', () => {
-    function buildKlapTaskBody(sourceUrl: string, config: Record<string, unknown>): Record<string, unknown> {
-      const body: Record<string, unknown> = {
-        source_video_url: sourceUrl,
-        language: 'en',
-      };
-      
-      if (config.max_duration) body.max_duration = config.max_duration;
-      if (config.max_clip_count) body.max_clip_count = config.max_clip_count;
-      if (config.editing_options) body.editing_options = config.editing_options;
-      if (config.dimensions) body.dimensions = config.dimensions;
-      
-      return body;
+describe('POST /api/experiments ClipConfig translation', () => {
+  describe('clipDuration -> clipDurations range mapping', () => {
+    function toClipDurations(d: 30 | 60 | 90): [number, number][] {
+      if (d === 30) return [[0, 30]];
+      if (d === 60) return [[30, 60]];
+      return [[60, 90]];
     }
 
-    it('includes source_video_url in body', () => {
-      const body = buildKlapTaskBody('https://www.youtube.com/watch?v=test', {});
-      expect(body.source_video_url).toBe('https://www.youtube.com/watch?v=test');
-    });
-
-    it('includes language: en by default', () => {
-      const body = buildKlapTaskBody('https://www.youtube.com/watch?v=test', {});
-      expect(body.language).toBe('en');
-    });
-
-    it('includes max_duration when provided', () => {
-      const body = buildKlapTaskBody('https://www.youtube.com/watch?v=test', { max_duration: 60 });
-      expect(body.max_duration).toBe(60);
-    });
-
-    it('includes max_clip_count when provided', () => {
-      const body = buildKlapTaskBody('https://www.youtube.com/watch?v=test', { max_clip_count: 5 });
-      expect(body.max_clip_count).toBe(5);
-    });
-
-    it('includes editing_options when provided', () => {
-      const editingOptions = { captions: true, emojis: false };
-      const body = buildKlapTaskBody('https://www.youtube.com/watch?v=test', { editing_options: editingOptions });
-      expect(body.editing_options).toEqual(editingOptions);
-    });
-
-    it('includes dimensions when provided', () => {
-      const dimensions = { width: 1080, height: 1920 };
-      const body = buildKlapTaskBody('https://www.youtube.com/watch?v=test', { dimensions });
-      expect(body.dimensions).toEqual(dimensions);
-    });
-
-    it('omits optional fields when not provided', () => {
-      const body = buildKlapTaskBody('https://www.youtube.com/watch?v=test', {});
-      expect('max_duration' in body).toBe(false);
-      expect('max_clip_count' in body).toBe(false);
-      expect('editing_options' in body).toBe(false);
-      expect('dimensions' in body).toBe(false);
-    });
+    it('30s -> [[0,30]]', () => expect(toClipDurations(30)).toEqual([[0, 30]]));
+    it('60s -> [[30,60]]', () => expect(toClipDurations(60)).toEqual([[30, 60]]));
+    it('90s -> [[60,90]]', () => expect(toClipDurations(90)).toEqual([[60, 90]]));
   });
 });
 

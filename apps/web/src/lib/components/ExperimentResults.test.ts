@@ -20,28 +20,29 @@ describe('ExperimentResults component', () => {
         {
           id: 'clip-1',
           jobId: 'job-1',
-          klapFolderId: 'folder-1',
-          name: 'Test Clip',
-          viralityScore: 85,
+          providerClipId: 'reap_clip_001',
+          title: 'Test Clip',
+          viralityScore: 8.5,
           viralityScoreExplanation: 'High engagement potential',
-          previewUrl: 'https://example.com/preview.mp4',
-          exportStatus: 'ready',
-          exportUrl: 'https://example.com/export.mp4',
+          duration: 28.4,
+          startTime: 10.0,
+          endTime: 38.4,
           createdAt: new Date(),
         },
       ];
-      
+
       expect(mockClips.length).toBe(1);
-      expect(mockClips[0].name).toBe('Test Clip');
+      expect(mockClips[0]!.title).toBe('Test Clip');
     });
 
     it('handles multiple clips', () => {
+      const base = { jobId: 'job-1', providerClipId: 'c', viralityScore: 8, viralityScoreExplanation: null, duration: 30, startTime: 0, endTime: 30, createdAt: new Date() };
       const mockClips: Clip[] = [
-        { id: 'clip-1', jobId: 'job-1', klapFolderId: 'folder-1', name: 'Clip 1', viralityScore: 80, viralityScoreExplanation: null, previewUrl: null, exportStatus: null, exportUrl: null, createdAt: new Date() },
-        { id: 'clip-2', jobId: 'job-1', klapFolderId: 'folder-1', name: 'Clip 2', viralityScore: 90, viralityScoreExplanation: null, previewUrl: null, exportStatus: null, exportUrl: null, createdAt: new Date() },
-        { id: 'clip-3', jobId: 'job-1', klapFolderId: 'folder-1', name: 'Clip 3', viralityScore: 75, viralityScoreExplanation: null, previewUrl: null, exportStatus: null, exportUrl: null, createdAt: new Date() },
+        { id: 'clip-1', title: 'Clip 1', ...base },
+        { id: 'clip-2', title: 'Clip 2', ...base },
+        { id: 'clip-3', title: 'Clip 3', ...base },
       ];
-      
+
       expect(mockClips.length).toBe(3);
     });
 
@@ -49,37 +50,19 @@ describe('ExperimentResults component', () => {
       const clip: Clip = {
         id: 'clip-1',
         jobId: 'job-1',
-        klapFolderId: 'folder-1',
-        name: 'Test Clip',
-        viralityScore: 85,
+        providerClipId: 'reap_clip_001',
+        title: 'Test Clip',
+        viralityScore: 8.5,
         viralityScoreExplanation: 'Test explanation',
-        previewUrl: 'https://example.com/preview.mp4',
-        exportStatus: 'ready',
-        exportUrl: 'https://example.com/export.mp4',
+        duration: 28.4,
+        startTime: 10.0,
+        endTime: 38.4,
         createdAt: new Date(),
       };
-      
+
       expect(clip.id).toBeDefined();
-      expect(clip.name).toBeDefined();
+      expect(clip.title).toBeDefined();
       expect(clip.viralityScore).toBeDefined();
-    });
-  });
-
-  describe('Export handling', () => {
-    it('accepts onExport callback', () => {
-      const onExport = (clip: Clip) => {
-        console.log('Exporting clip:', clip.id);
-      };
-      
-      expect(typeof onExport).toBe('function');
-    });
-
-    it('tracks exporting clip ID', () => {
-      const exportingClipId: string | null = 'clip-1';
-      expect(exportingClipId).toBe('clip-1');
-      
-      const noExporting: string | null = null;
-      expect(noExporting).toBeNull();
     });
   });
 
@@ -91,22 +74,41 @@ describe('ExperimentResults component', () => {
   });
 
   describe('Clip with null values', () => {
-    it('handles clip with null name', () => {
+    it('handles clip with null title and scores', () => {
       const clip: Clip = {
         id: 'clip-1',
         jobId: 'job-1',
-        klapFolderId: 'folder-1',
-        name: null,
+        providerClipId: 'reap_clip_002',
+        title: null,
         viralityScore: null,
         viralityScoreExplanation: null,
-        previewUrl: null,
-        exportStatus: null,
-        exportUrl: null,
+        duration: null,
+        startTime: null,
+        endTime: null,
         createdAt: new Date(),
       };
-      
-      expect(clip.name).toBeNull();
+
+      expect(clip.title).toBeNull();
       expect(clip.viralityScore).toBeNull();
+    });
+  });
+
+  describe('clipUrl handling', () => {
+    it('clipUrl is absent from Clip type (fetched separately via ClipResponse)', () => {
+      // Clip stores metadata only. ClipResponse includes the live clipUrl.
+      const clip: Clip = {
+        id: 'clip-1',
+        jobId: 'job-1',
+        providerClipId: 'reap_clip_001',
+        title: 'Test',
+        viralityScore: 7,
+        viralityScoreExplanation: null,
+        duration: 30,
+        startTime: 0,
+        endTime: 30,
+        createdAt: new Date(),
+      };
+      expect('clipUrl' in clip).toBe(false);
     });
   });
 });

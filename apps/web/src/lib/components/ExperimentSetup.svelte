@@ -129,7 +129,7 @@
     <div>
       <p class="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Experiment setup</p>
       <h2 class="text-2xl font-semibold text-[var(--fg)]">Create a new experiment</h2>
-      <p class="text-xs text-[var(--muted)]">Share a source video, define variants, and let Klap do the rest.</p>
+      <p class="text-xs text-[var(--muted)]">Share a source video, define variants, and let AI do the rest.</p>
     </div>
     <span class="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold text-[var(--accent)]">
       Variants: {configs.length}
@@ -278,7 +278,7 @@
     >
       + Add variant
     </button>
-    <p class="text-xs text-[var(--muted)]">Variants power Klap multi-configuration jobs.</p>
+    <p class="text-xs text-[var(--muted)]">Variants power multi-configuration clipping jobs.</p>
   </div>
 
   {#if error}

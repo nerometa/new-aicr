@@ -44,16 +44,8 @@ function sanitizeYouTubeUrl(url: string): string | null {
   return videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
 }
 
-function buildKlapTaskBody(sourceUrl: string, config: Record<string, unknown>): Record<string, unknown> {
-  const body: Record<string, unknown> = {
-    source_video_url: sourceUrl,
-    language: 'en',
-  };
-  if (config.max_duration) body.max_duration = config.max_duration;
-  if (config.max_clip_count) body.max_clip_count = config.max_clip_count;
-  if (config.editing_options) body.editing_options = config.editing_options;
-  if (config.dimensions) body.dimensions = config.dimensions;
-  return body;
+function buildClipConfig(clipDuration: 30 | 60 | 90, orientation: 'portrait' | 'landscape' | 'square', captions: boolean, emojis: boolean): Record<string, unknown> {
+  return { clipDuration, orientation, captions, emojis };
 }
 
 // Mock requireOwner authentication logic
@@ -172,21 +164,20 @@ describe('E2E: POST /api/experiments - Valid Data', () => {
     }
   });
 
-  it('builds correct Klap task body with configuration', () => {
-    const config = { max_duration: 60, max_clip_count: 5 };
-    const body = buildKlapTaskBody(validYouTubeUrl, config);
-    
-    expect(body.source_video_url).toBe(validYouTubeUrl);
-    expect(body.language).toBe('en');
-    expect(body.max_duration).toBe(60);
-    expect(body.max_clip_count).toBe(5);
+  it('builds correct ClipConfig with orientation and duration', () => {
+    const config = buildClipConfig(60, 'portrait', true, false);
+
+    expect(config.clipDuration).toBe(60);
+    expect(config.orientation).toBe('portrait');
+    expect(config.captions).toBe(true);
+    expect(config.emojis).toBe(false);
   });
 
-  it('builds Klap task body with optional editing_options', () => {
-    const config = { editing_options: { captions: true, emojis: false } };
-    const body = buildKlapTaskBody(validYouTubeUrl, config);
-    
-    expect(body.editing_options).toEqual({ captions: true, emojis: false });
+  it('builds ClipConfig with emojis enabled', () => {
+    const config = buildClipConfig(30, 'square', false, true);
+
+    expect(config.captions).toBe(false);
+    expect(config.emojis).toBe(true);
   });
 
   it('generates valid UUID for experiment ID', () => {
@@ -217,7 +208,7 @@ describe('E2E: Job Creation with experiment_id', () => {
       id: jobId,
       experiment_id: experimentId,
       youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-      klapTaskId: 'klap-task-123',
+      providerProjectId: 'reap-proj-123',
       status: 'pending',
       createdAt: new Date(),
     };
@@ -243,21 +234,21 @@ describe('E2E: Job Creation with experiment_id', () => {
     expect(jobs.every(j => j.experiment_id === experimentId)).toBe(true);
   });
 
-  it('stores Klap task ID from API response', () => {
-    const mockKlapTaskId = 'klap-task-abc123';
+  it('stores providerProjectId from API response', () => {
+    const mockProjectId = 'reap-proj-abc123';
     const job = {
       id: randomUUID(),
-      klapTaskId: mockKlapTaskId,
+      providerProjectId: mockProjectId,
       status: 'pending',
     };
-    
-    expect(job.klapTaskId).toBe(mockKlapTaskId);
+
+    expect(job.providerProjectId).toBe(mockProjectId);
   });
 
   it('handles partial job creation failures', () => {
     const results = {
       jobIds: ['job-1', 'job-2'],
-      errors: [{ configIndex: 2, error: 'Klap API error' }],
+      errors: [{ configIndex: 2, error: 'Provider API error' }],
     };
     
     expect(results.jobIds).toHaveLength(2);
@@ -471,7 +462,7 @@ describe('E2E: Full Experiments Flow Integration', () => {
       id,
       experiment_id: experimentId,
       youtubeUrl: sourceVideoUrl,
-      klapTaskId: `klap-task-${id.slice(0, 8)}`,
+      providerProjectId: `reap-proj-${id.slice(0, 8)}`,
       status: 'pending',
     }));
     
@@ -505,15 +496,15 @@ describe('E2E: Full Experiments Flow Integration', () => {
 // Test: Error Scenarios
 // =============================================================================
 describe('E2E: Error Scenarios', () => {
-  it('returns 500 when Klap API is not configured', () => {
-    const isKlapConfigured = false;
-    const errorResponse = { 
-      error: 'Klap API not configured', 
-      message: 'KLAP_API_KEY is missing.' 
+  it('returns 500 when provider API key is not configured', () => {
+    const isProviderConfigured = false;
+    const errorResponse = {
+      error: 'Provider API not configured',
+      message: 'REAP_API_KEY is missing.',
     };
-    
-    expect(isKlapConfigured).toBe(false);
-    expect(errorResponse.error).toBe('Klap API not configured');
+
+    expect(isProviderConfigured).toBe(false);
+    expect(errorResponse.error).toBe('Provider API not configured');
   });
 
   it('returns 400 for invalid YouTube URL', () => {
@@ -532,7 +523,7 @@ describe('E2E: Error Scenarios', () => {
 
   it('handles experiment with all jobs failing', () => {
     const errors = [
-      { configIndex: 0, error: 'Klap API timeout' },
+      { configIndex: 0, error: 'Provider API timeout' },
       { configIndex: 1, error: 'Invalid video format' },
     ];
     

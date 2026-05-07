@@ -1,22 +1,16 @@
 import { t } from 'elysia';
 
+// Provider-agnostic experiment configuration.
+// Only fields every current provider can honour — no silent no-ops.
 export const Configuration = t.Object({
-  max_duration: t.Optional(t.Number({ minimum: 1, maximum: 180 })),
-  max_clip_count: t.Optional(t.Number({ minimum: 1, maximum: 10 })),
-  editing_options: t.Optional(
-    t.Object({
-      captions: t.Optional(t.Boolean()),
-      emojis: t.Optional(t.Boolean()),
-      remove_silences: t.Optional(t.Boolean()),
-    })
-  ),
-  dimensions: t.Optional(
-    t.Object({
-      width: t.Optional(t.Number()),
-      height: t.Optional(t.Number()),
-      aspectRatio: t.Optional(t.String()),
-    })
-  ),
+  clipDuration: t.Optional(t.Union([t.Literal(30), t.Literal(60), t.Literal(90)])),
+  orientation: t.Optional(t.Union([
+    t.Literal('portrait'),
+    t.Literal('landscape'),
+    t.Literal('square'),
+  ])),
+  captions: t.Optional(t.Boolean()),
+  emojis: t.Optional(t.Boolean()),
 });
 
 export const CreateExperimentRequest = t.Object({
@@ -42,4 +36,7 @@ export const ExperimentResponse = t.Object({
   createdAt: t.String({ format: 'date-time' }),
 });
 
-export const ExperimentDetail = t.Intersect([ExperimentResponse, t.Object({ jobs: t.Array(JobInfo) })]);
+export const ExperimentDetail = t.Intersect([
+  ExperimentResponse,
+  t.Object({ jobs: t.Array(JobInfo) }),
+]);

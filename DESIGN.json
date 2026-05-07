@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-03T00:00:00.000Z",
+  "title": "Design System: AICR",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Warm Coral",
+        "canonical": "#FF6B4A"
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "Soft Stone",
+        "canonical": "#faf9f7"
+      },
+      "neutral-fg": {
+        "role": "neutral",
+        "displayName": "Charcoal",
+        "canonical": "#171717"
+      },
+      "neutral-border": {
+        "role": "neutral",
+        "displayName": "Warm Gray",
+        "canonical": "#E7E5E4"
+      },
+      "dark-bg": {
+        "role": "neutral",
+        "displayName": "Deep Black",
+        "canonical": "#0e0e0e"
+      },
+      "dark-fg": {
+        "role": "neutral",
+        "displayName": "Soft Cream",
+        "canonical": "#f0ede6"
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero headlines, major section titles" },
+      "headline": { "displayName": "Headline", "purpose": "Page titles, major headers" },
+      "body": { "displayName": "Body", "purpose": "Paragraphs, descriptions, main content" }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "fadeUp", "value": "fade-up 0.4s ease-out", "purpose": "Page load entrance animation" }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action button with coral background",
+      "html": "<button class=\"ds-btn-primary\">Click me</button>",
+      "css": ".ds-btn-primary { background: #FF6B4A; color: #ffffff; padding: 12px 24px; border: none; border-radius: 12px; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 500; cursor: pointer; transition: background 0.2s; } .ds-btn-primary:hover { background: #e55a3a; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Text input with border and rounded corners",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Enter text...\" />",
+      "css": ".ds-input { background: #faf9f7; color: #171717; border: 1px solid #E7E5E4; border-radius: 12px; padding: 12px 16px; font-family: 'Plus Jakarta Sans', sans-serif; transition: border-color 0.2s; } .ds-input:focus { border-color: #FF6B4A; outline: none; } .ds-input::placeholder { color: #9CA3AF; }"
+    },
+    {
+      "name": "Card Container",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Rounded container with optional border",
+      "html": "<div class=\"ds-card\">Content</div>",
+      "css": ".ds-card { background: #faf9f7; border-radius: 24px; padding: 24px; border: 1px solid #E7E5E4; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Welcoming Workshop",
+    "overview": "AICR's visual system is warm, approachable, and stripped of unnecessary complexity. The interface should feel like a well-organized workshop — everything has its place, tools are within reach, and the work flows naturally. Unlike cold enterprise dashboards or flashy marketing SaaS, this is a place where creators feel comfortable doing the repetitive work of content repurposing.",
+    "keyCharacteristics": [
+      "Warm neutral backgrounds with coral accent as the sole color voice",
+      "Rounded corners (12–24px) for a friendly, approachable feel",
+      "Flat by default — no shadows unless serving a functional purpose",
+      "Plus Jakarta Sans throughout — modern, geometric, highly legible",
+      "Dark mode supported with inverted neutrals, same coral accent"
+    ],
+    "rules": [
+      { "name": "The Coral Energy Rule", "body": "The primary accent (#FF6B4A) is used sparingly — only on primary actions, active states, and focal points.", "section": "colors" },
+      { "name": "The Flat-by-Default Rule", "body": "Surfaces are flat at rest. Depth is conveyed through background tonal contrast, border presence, and spacing.", "section": "elevation" },
+      { "name": "The Single Typeface Rule", "body": "All text uses Plus Jakarta Sans. No second font for code — monospace only where semantic.", "section": "typography" }
+    ],
+    "dos": [
+      "Use the coral accent (#FF6B4A) for primary actions only",
+      "Maintain warm neutral backgrounds — never use pure white (#ffffff) or pure black (#000000)",
+      "Use 12px radius on interactive elements (buttons, inputs), 24px on container/hero elements",
+      "Keep all typography in Plus Jakarta Sans",
+      "Support both light and dark modes with the same color tokens",
+      "Use motion sparingly — fade-up on page load, subtle transitions on hover/focus"
+    ],
+    "donts": [
+      "Add blue/purple gradient hero sections — this is a tool, not a marketing site",
+      "Use glassmorphism or backdrop blur as decorative elements",
+      "Create identical card grids with icon + heading + text repeated endlessly",
+      "Use hero-metric templates (big number, small label, gradient accent)",
+      "Use border-left or border-right as colored accent stripes (side-stripe borders)",
+      "Use gradient text — emphasis comes from weight or size, never gradients",
+      "Use red/green as the sole indicator of success/failure (accessibility)",
+      "Add unnecessary animations, onboarding tours, or attention-demanding empty states"
+    ]
+  }
+}

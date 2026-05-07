@@ -1,15 +1,13 @@
 // Shared types for AICR
-// Status values match Klap API: "processing" | "ready" | "error"
+// Job status: pending -> processing -> ready | error
 
 export type JobStatus = 'pending' | 'processing' | 'ready' | 'error';
-export type ExportStatus = 'pending' | 'processing' | 'ready' | 'error';
 
 export interface Job {
   id: string;
   userId: string | null; // null for anonymous jobs
   youtubeUrl: string;
-  klapTaskId: string | null;
-  klapFolderId: string | null;
+  providerProjectId: string | null;
   status: JobStatus;
   errorMessage: string | null;
   createdAt: Date;
@@ -19,14 +17,13 @@ export interface Job {
 export interface Clip {
   id: string;
   jobId: string;
-  klapFolderId: string;
-  name: string | null;
+  providerClipId: string;
+  title: string | null;
   viralityScore: number | null;
   viralityScoreExplanation: string | null;
-  previewUrl: string | null;
-  embedUrl: string | null;
-  exportStatus: ExportStatus | null;
-  exportUrl: string | null;
+  duration: number | null;
+  startTime: number | null;
+  endTime: number | null;
   createdAt: Date;
 }
 
@@ -38,23 +35,20 @@ export interface JobResponse {
   id: string;
   status: JobStatus;
   youtubeUrl: string;
+  errorMessage?: string | null;
 }
 
 export interface ClipResponse {
   id: string;
   jobId: string;
-  name: string | null;
+  title: string | null;
   viralityScore: number | null;
-  previewUrl: string | null;
-  embedUrl: string | null;
-  exportStatus: ExportStatus | null;
-  exportUrl: string | null;
-}
-
-export interface ExportResponse {
-  exportId: string;
-  status: ExportStatus;
-  exportUrl?: string;
+  viralityScoreExplanation: string | null;
+  duration: number | null;
+  startTime: number | null;
+  endTime: number | null;
+  // Ephemeral — fetched live from provider, null when project expired
+  clipUrl: string | null;
 }
 
 export interface SSEResponse {

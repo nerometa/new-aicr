@@ -13,7 +13,6 @@ export const user = sqliteTable('user', {
   image: text('image'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`).notNull(),
-  klapManagedUserId: text('klap_managed_user_id'),
 });
 
 export const session = sqliteTable('session', {
@@ -56,15 +55,14 @@ export const verification = sqliteTable('verification', {
 // Application Tables
 // ============================================
 
-// Job status: pending (local) -> processing (Klap) -> ready/error (Klap)
+// Job status: pending -> processing -> ready | error
 export const jobs = sqliteTable('jobs', {
   id: text('id').primaryKey(),
-  // userId is nullable - allows anonymous job creation
   userId: text('user_id').references(() => user.id),
-  experiment_id: text('experiment_id').references(() => experiments.id),
+  experimentId: text('experiment_id').references(() => experiments.id),
   youtubeUrl: text('youtube_url').notNull(),
-  klapTaskId: text('klap_task_id'),
-  klapFolderId: text('klap_folder_id'),
+  // Opaque ID assigned by the active provider (Reap project ID, etc.)
+  providerProjectId: text('provider_project_id'),
   status: text('status').notNull().default('pending'),
   errorMessage: text('error_message'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
@@ -74,14 +72,14 @@ export const jobs = sqliteTable('jobs', {
 export const clips = sqliteTable('clips', {
   id: text('id').primaryKey(),
   jobId: text('job_id').references(() => jobs.id),
-  klapFolderId: text('klap_folder_id').notNull(),
-  name: text('name'),
+  // Opaque clip ID from provider (used for live URL fetch)
+  providerClipId: text('provider_clip_id').notNull(),
+  title: text('title'),
   viralityScore: real('virality_score'),
   viralityScoreExplanation: text('virality_score_explanation'),
-  previewUrl: text('preview_url'),
-  embedUrl: text('embed_url'),
-  exportStatus: text('export_status'),
-  exportUrl: text('export_url'),
+  duration: real('duration'),
+  startTime: real('start_time'),
+  endTime: real('end_time'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 

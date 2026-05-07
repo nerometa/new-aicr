@@ -1,7 +1,8 @@
 import { Elysia, type Static } from 'elysia';
 import { db } from '../db/client';
 import { jobs, experiments, clips } from '../db/schema';
-import { klapRequest, isKlapConfigured, type KlapTask } from '../services/klap';
+import { provider } from '../services/providers';
+import type { ClipConfig } from '../services/providers';
 import { enqueueJob } from '../services/poller';
 import { randomUUID } from 'crypto';
 import { auth } from '../lib/auth';
@@ -13,47 +14,49 @@ import { extractVideoId, sanitizeYouTubeUrl } from '../lib/youtube';
 type ConfigType = Static<typeof Configuration>;
 type CreateExperimentBody = Static<typeof CreateExperimentRequest>;
 
-function buildKlapTaskBody(sourceUrl: string, config: ConfigType): Record<string, unknown> {
-  const body: Record<string, unknown> = {
-    source_video_url: sourceUrl,
-    language: 'en',
+function toClipConfig(config: ConfigType): ClipConfig {
+  return {
+    clipDuration: config.clipDuration,
+    orientation: config.orientation,
+    captions: config.captions,
+    emojis: config.emojis,
   };
-  
-  if (config.max_duration) body.max_duration = config.max_duration;
-  if (config.max_clip_count) body.max_clip_count = config.max_clip_count;
-  if (config.editing_options) body.editing_options = config.editing_options;
-  if (config.dimensions) body.dimensions = config.dimensions;
-  
-  return body;
 }
 
-function createVideoTaskWithConfig(sourceUrl: string, config: ConfigType): Promise<KlapTask> {
-  const body = buildKlapTaskBody(sourceUrl, config);
-  return klapRequest<KlapTask>('/tasks/video-to-shorts', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
+// Auto-name an experiment config for display (e.g. "dur-30-portrait-caps")
+function configLabel(config: ConfigType): string {
+  const parts: string[] = [];
+  if (config.clipDuration) parts.push(`dur-${config.clipDuration}`);
+  if (config.orientation) parts.push(config.orientation);
+  if (config.captions !== undefined) parts.push(config.captions ? 'caps' : 'no-caps');
+  if (config.emojis !== undefined) parts.push(config.emojis ? 'emojis' : 'no-emojis');
+  return parts.join('-') || 'default';
 }
-
 
 async function requireOwner(headers: Headers): Promise<string> {
   const api = (auth as any).api;
-  if (!api || typeof api.getSession !== 'function') {
-    throw new Error('Unauthorized');
-  }
-  
+  if (!api || typeof api.getSession !== 'function') throw new Error('Unauthorized');
   const session = await api.getSession({ headers: headers as any });
   const userId = session?.user?.id;
-  
-  if (!userId) {
-    throw new Error('Unauthorized');
-  }
-  
-  if (userId !== env.OWNER_USER_ID) {
-    throw new Error('Forbidden');
-  }
-  
+  if (!userId) throw new Error('Unauthorized');
+  if (userId !== env.OWNER_USER_ID) throw new Error('Forbidden');
   return userId;
+}
+
+function authGuard(error: unknown): { status: number; body: object } {
+  if (error instanceof Error && error.message === 'Forbidden') {
+    return { status: 403, body: { error: 'Forbidden' } };
+  }
+  return { status: 401, body: { error: 'Unauthorized' } };
+}
+
+function deriveExperimentStatus(jobStatuses: Set<string>): string {
+  const all = [...jobStatuses];
+  if (all.every(s => s === 'error')) return 'error';
+  if (all.every(s => s === 'ready')) return 'ready';
+  if (all.some(s => s === 'error') && all.some(s => s === 'ready')) return 'partial';
+  if (all.some(s => s === 'processing' || s === 'pending')) return 'processing';
+  return 'pending';
 }
 
 export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
@@ -62,17 +65,9 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
     try {
       authenticatedUserId = await requireOwner(request.headers);
     } catch (error) {
-      if (error instanceof Error && error.message === 'Forbidden') {
-        set.status = 403;
-        return { error: 'Forbidden' };
-      }
-      set.status = 401;
-      return { error: 'Unauthorized' };
-    }
-
-    if (!isKlapConfigured()) {
-      set.status = 500;
-      return { error: 'Klap API not configured', message: 'KLAP_API_KEY is missing.' };
+      const { status, body: errBody } = authGuard(error);
+      set.status = status;
+      return errBody;
     }
 
     const typedBody = body as CreateExperimentBody;
@@ -81,7 +76,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
       set.status = 400;
       return { error: 'Invalid URL', message: 'Please provide a valid YouTube URL' };
     }
-    
+
     const videoId = extractVideoId(typedBody.sourceVideoUrl);
     if (!videoId) {
       set.status = 400;
@@ -97,7 +92,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
       sourceVideoUrl: sanitizedUrl,
       sourceVideoId: videoId,
       name: typedBody.name,
-      description: (typedBody as any).description ?? null,
+      description: typedBody.description ?? null,
       status: 'pending',
       createdAt: now,
       updatedAt: now,
@@ -105,23 +100,23 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
 
     const jobIds: string[] = [];
     const errors: Array<{ configIndex: number; error: string }> = [];
-
     const configurations = typedBody.configurations ?? [];
+
     for (let i = 0; i < configurations.length; i++) {
       const config = configurations[i];
       if (!config) continue;
-      
-      const jobId = randomUUID();
 
+      const jobId = randomUUID();
       try {
-        const klapTask = await createVideoTaskWithConfig(sanitizedUrl, config);
+        const clipConfig = toClipConfig(config);
+        const providerProjectId = await provider.createProject(sanitizedUrl, clipConfig);
 
         await db.insert(jobs).values({
           id: jobId,
           userId: authenticatedUserId,
-          experiment_id: experimentId,
+          experimentId,
           youtubeUrl: sanitizedUrl,
-          klapTaskId: klapTask.id,
+          providerProjectId,
           status: 'pending',
           createdAt: now,
           updatedAt: now,
@@ -143,8 +138,8 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
         .set({ status: 'error', updatedAt: new Date() })
         .where(eq(experiments.id, experimentId));
       set.status = 500;
-      return { 
-        error: 'All jobs failed', 
+      return {
+        error: 'All jobs failed',
         message: 'Failed to create any jobs for experiment',
         details: errors,
       };
@@ -163,31 +158,22 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
       description: 'Create an experiment with multiple job configurations for A/B testing',
     },
   })
+
   .get('/', async ({ request, set }) => {
     let authenticatedUserId: string;
     try {
       authenticatedUserId = await requireOwner(request.headers);
     } catch (error) {
-      if (error instanceof Error && error.message === 'Forbidden') {
-        set.status = 403;
-        return { error: 'Forbidden' };
-      }
-      set.status = 401;
-      return { error: 'Unauthorized' };
+      const { status, body } = authGuard(error);
+      set.status = status;
+      return body;
     }
 
     const results = await db.select().from(experiments).where(eq(experiments.userId, authenticatedUserId));
-    const experimentsWithStatus = await Promise.all((results as any[]).map(async (e) => {
-      const relatedJobs = await db.select().from(jobs).where(eq(jobs.experiment_id, e.id));
-      const jobStatuses = new Set(relatedJobs.map(j => j.status));
-      let computedStatus = e.status;
-      if (jobStatuses.has('error')) {
-        computedStatus = 'error';
-      } else if (jobStatuses.has('ready') && !jobStatuses.has('pending') && !jobStatuses.has('processing')) {
-        computedStatus = 'ready';
-      } else if (jobStatuses.has('processing') || jobStatuses.has('pending')) {
-        computedStatus = 'processing';
-      }
+
+    return Promise.all(results.map(async (e) => {
+      const relatedJobs = await db.select().from(jobs).where(eq(jobs.experimentId, e.id));
+      const computedStatus = deriveExperimentStatus(new Set(relatedJobs.map(j => j.status)));
       return {
         id: e.id,
         name: e.name,
@@ -197,146 +183,109 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
         createdAt: e.createdAt,
       };
     }));
-    return experimentsWithStatus;
   })
+
   .get('/:id', async ({ params, request, set }) => {
-    // Authorization: ensure the request is from the owner
     try {
       await requireOwner(request.headers);
     } catch (error) {
-      if (error instanceof Error && error.message === 'Forbidden') {
-        set.status = 403;
-        return { error: 'Forbidden' };
-      }
-      set.status = 401;
-      return { error: 'Unauthorized' };
+      const { status, body } = authGuard(error);
+      set.status = status;
+      return body;
     }
 
     const id = (params as any)?.id as string | undefined;
-    if (!id) {
-      set.status = 400;
-      return { error: 'Missing id' };
-    }
+    if (!id) { set.status = 400; return { error: 'Missing id' }; }
 
-    // Fetch experiment by ID
     const [experiment] = await db.select().from(experiments).where(eq(experiments.id, id));
-    if (!experiment) {
-      set.status = 404;
-      return { error: 'Experiment not found' };
-    }
+    if (!experiment) { set.status = 404; return { error: 'Experiment not found' }; }
 
-    // Fetch related jobs
-    const relatedJobs = await db.select().from(jobs).where(eq(jobs.experiment_id, id));
-
-    // Fetch clips for all related jobs
+    const relatedJobs = await db.select().from(jobs).where(eq(jobs.experimentId, id));
     const jobIds = relatedJobs.map(j => j.id);
     const relatedClips = jobIds.length > 0
       ? await db.select().from(clips).where(inArray(clips.jobId, jobIds))
       : [];
 
-    const clipsByJobId: Record<string, Array<{id: string; name: string | null; viralityScore: number | null; previewUrl: string | null; exportStatus: string | null; exportUrl: string | null; embedUrl: string | null}>> = {};
+    const clipsByJobId: Record<string, typeof relatedClips> = {};
     for (const clip of relatedClips) {
-      const jId = clip.jobId;
-      if (jId) {
-        if (!clipsByJobId[jId]) clipsByJobId[jId] = [];
-        clipsByJobId[jId]!.push({
-          id: clip.id,
-          name: clip.name,
-          viralityScore: clip.viralityScore,
-          previewUrl: clip.previewUrl,
-          exportStatus: clip.exportStatus,
-          exportUrl: clip.exportUrl,
-          embedUrl: clip.embedUrl ?? null,
-        });
+      if (clip.jobId) {
+        if (!clipsByJobId[clip.jobId]) clipsByJobId[clip.jobId] = [];
+        clipsByJobId[clip.jobId]!.push(clip);
       }
     }
 
-    const jobStatuses = new Set(relatedJobs.map(j => j.status));
-    let computedStatus = experiment.status;
-    if (jobStatuses.has('error')) {
-      computedStatus = 'error';
-    } else if (jobStatuses.has('ready') && !jobStatuses.has('pending') && !jobStatuses.has('processing')) {
-      computedStatus = 'ready';
-    } else if (jobStatuses.has('processing') || jobStatuses.has('pending')) {
-      computedStatus = 'processing';
-    }
+    const computedStatus = deriveExperimentStatus(new Set(relatedJobs.map(j => j.status)));
 
     const jobsWithClips = relatedJobs.map(job => ({
-      ...job,
-      clips: clipsByJobId[job.id] ?? [],
+      id: job.id,
+      status: job.status,
+      errorMessage: job.errorMessage,
+      clips: (clipsByJobId[job.id] ?? []).map(c => ({
+        id: c.id,
+        title: c.title,
+        viralityScore: c.viralityScore,
+        viralityScoreExplanation: c.viralityScoreExplanation,
+        duration: c.duration,
+        startTime: c.startTime,
+        endTime: c.endTime,
+      })),
     }));
 
-    return {
-      ...experiment,
-      status: computedStatus,
-      jobs: jobsWithClips,
-    };
+    return { ...experiment, status: computedStatus, jobs: jobsWithClips };
   }, {
     detail: {
       summary: 'Get experiment by id with joined jobs',
       description: 'Return an experiment and its associated jobs by ID',
     },
   })
+
   .delete('/:id', async ({ params, set, request }) => {
-    let authenticatedUserId: string;
     try {
-      authenticatedUserId = await requireOwner(request.headers);
+      await requireOwner(request.headers);
     } catch (error) {
-      if (error instanceof Error && error.message === 'Forbidden') {
-        set.status = 403;
-        return { error: 'Forbidden' };
-      }
-      set.status = 401;
-      return { error: 'Unauthorized' };
+      const { status, body } = authGuard(error);
+      set.status = status;
+      return body;
     }
 
     const id = (params as any)?.id as string | undefined;
-    if (!id) {
-      set.status = 400;
-      return { error: 'Missing id' };
-    }
+    if (!id) { set.status = 400; return { error: 'Missing id' }; }
 
-    const existing = await db.select().from(experiments).where(eq(experiments.id, id)).execute();
-    const row = Array.isArray(existing) ? existing[0] : (existing?.[0] ?? undefined);
-    if (!row) {
-      set.status = 404;
-      return { error: 'Experiment not found' };
-    }
+    const [existing] = await db.select().from(experiments).where(eq(experiments.id, id));
+    if (!existing) { set.status = 404; return { error: 'Experiment not found' }; }
 
-    await db.delete(jobs).where(eq(jobs.experiment_id, id));
+    // Cascade: delete clips -> jobs -> experiment
+    const relatedJobs = await db.select().from(jobs).where(eq(jobs.experimentId, id));
+    const jobIds = relatedJobs.map(j => j.id);
+    if (jobIds.length > 0) {
+      await db.delete(clips).where(inArray(clips.jobId, jobIds));
+    }
+    await db.delete(jobs).where(eq(jobs.experimentId, id));
     await db.delete(experiments).where(eq(experiments.id, id));
     return { message: 'Experiment deleted', id };
   }, {
     detail: {
       summary: 'Delete an experiment by ID',
-      description: 'Removes the experiment and all associated jobs. Protected by owner authentication.',
+      description: 'Removes the experiment and all associated jobs and clips.',
     },
   })
+
   .get('/:id/export', async ({ params, request, set }) => {
     try {
       await requireOwner(request.headers);
     } catch (error) {
-      if (error instanceof Error && error.message === 'Forbidden') {
-        set.status = 403;
-        return { error: 'Forbidden' };
-      }
-      set.status = 401;
-      return { error: 'Unauthorized' };
+      const { status, body } = authGuard(error);
+      set.status = status;
+      return body;
     }
 
     const id = (params as any)?.id as string | undefined;
-    if (!id) {
-      set.status = 400;
-      return { error: 'Missing id' };
-    }
+    if (!id) { set.status = 400; return { error: 'Missing id' }; }
 
     const [experiment] = await db.select().from(experiments).where(eq(experiments.id, id));
-    if (!experiment) {
-      set.status = 404;
-      return { error: 'Experiment not found' };
-    }
+    if (!experiment) { set.status = 404; return { error: 'Experiment not found' }; }
 
-    const relatedJobs = await db.select().from(jobs).where(eq(jobs.experiment_id, id));
+    const relatedJobs = await db.select().from(jobs).where(eq(jobs.experimentId, id));
     const jobIds = relatedJobs.map(j => j.id);
     const relatedClips = jobIds.length > 0
       ? await db.select().from(clips).where(inArray(clips.jobId, jobIds))
@@ -353,49 +302,30 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
     const header = [
       'experiment_name', 'experiment_description', 'experiment_status',
       'source_video_url', 'job_id', 'job_status', 'job_error',
-      'clip_name', 'virality_score', 'virality_score_explanation', 'clip_preview_url', 'clip_export_url',
+      'clip_title', 'virality_score', 'virality_score_explanation',
+      'duration', 'start_time', 'end_time',
     ].map(csvEscape).join(',');
 
     const rows: string[] = [header];
-
-    if (relatedJobs.length === 0) {
-      rows.push([
-        csvEscape(experiment.name),
-        csvEscape((experiment as any).description),
-        csvEscape(experiment.status),
-        csvEscape(experiment.sourceVideoUrl),
-        '', '', '', '', '', '', '', '',
-      ].join(','));
-    }
 
     for (const job of relatedJobs) {
       const jobClips = relatedClips.filter(c => c.jobId === job.id);
       if (jobClips.length === 0) {
         rows.push([
-          csvEscape(experiment.name),
-          csvEscape((experiment as any).description),
-          csvEscape(experiment.status),
-          csvEscape(experiment.sourceVideoUrl),
-          csvEscape(job.id),
-          csvEscape(job.status),
-          csvEscape(job.errorMessage),
-          '', '', '', '', '',
+          csvEscape(experiment.name), csvEscape(experiment.description),
+          csvEscape(experiment.status), csvEscape(experiment.sourceVideoUrl),
+          csvEscape(job.id), csvEscape(job.status), csvEscape(job.errorMessage),
+          '', '', '', '', '', '',
         ].join(','));
       } else {
         for (const clip of jobClips) {
           rows.push([
-            csvEscape(experiment.name),
-            csvEscape((experiment as any).description),
-            csvEscape(experiment.status),
-            csvEscape(experiment.sourceVideoUrl),
-            csvEscape(job.id),
-            csvEscape(job.status),
-            csvEscape(job.errorMessage),
-            csvEscape(clip.name),
-            csvEscape(clip.viralityScore),
-            csvEscape((clip as any).viralityScoreExplanation),
-            csvEscape(clip.previewUrl),
-            csvEscape(clip.exportUrl),
+            csvEscape(experiment.name), csvEscape(experiment.description),
+            csvEscape(experiment.status), csvEscape(experiment.sourceVideoUrl),
+            csvEscape(job.id), csvEscape(job.status), csvEscape(job.errorMessage),
+            csvEscape(clip.title), csvEscape(clip.viralityScore),
+            csvEscape(clip.viralityScoreExplanation),
+            csvEscape(clip.duration), csvEscape(clip.startTime), csvEscape(clip.endTime),
           ].join(','));
         }
       }
@@ -411,5 +341,3 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
       description: 'Export experiment data with jobs and clips as a CSV file',
     },
   });
-
- 
