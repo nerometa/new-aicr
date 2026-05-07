@@ -1,7 +1,6 @@
 <script lang="ts">
   import { viewStore } from '$lib/stores/view';
   import { jobStore } from '$lib/stores/job';
-  import { API_BASE } from '$lib/api';
   import ClipCard from './ClipCard.svelte';
 
   let { id }: { id: string } = $props();
@@ -52,28 +51,13 @@
   });
 
   import { onMount } from 'svelte';
-  import { toast } from '$lib/toast';
 
   onMount(() => {
     jobStore.initializeJob(id);
   });
 
-  async function handleExport(clipId: string) {
-    exportingClipId = clipId;
-    try {
-      const res = await fetch(`${API_BASE}/api/exports`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clipId }),
-      });
-      if (!res.ok) throw new Error('Export failed');
-      toast.success('Export started! We\'ll notify you when ready.');
-    } catch (e) {
-      toast.error('Failed to start export');
-    } finally {
-      exportingClipId = null;
-    }
-  }
+  // No-op: download handled directly via <a download> in ClipCard
+  function handleExport(_clip: unknown) {}
 </script>
 
 {#if $jobStore.job}

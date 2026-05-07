@@ -5,7 +5,7 @@
  * - Example: https://api.aicr.example.com or http://localhost:3000
  * - Must be set at build time (baked into the bundle)
  */
-import type { Job, Clip, JobResponse, CreateJobRequest, ExportResponse } from '@aicr/shared';
+import type { Job, ClipResponse, JobResponse, CreateJobRequest } from '@aicr/shared';
 
 // API base URL - VITE_API_URL must be set at build time
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -42,11 +42,6 @@ export const getJobs = () =>
 
 // Clips
 export const getClips = (jobId: string) =>
-  apiFetch<Clip[]>(`/api/clips/${jobId}`);
+  apiFetch<ClipResponse[]>(`/api/clips/${jobId}`);
 
-// Exports
-export const createExport = (clipId: string) =>
-  apiFetch<{ exportId: string; status: string }>(`/api/exports/${clipId}`, { method: 'POST' });
-
-export const getExport = (clipId: string, exportId: string) =>
-  apiFetch<ExportResponse>(`/api/exports/${clipId}/${exportId}`);
+// Export flow removed — Reap provides clipUrl directly. No separate export step.

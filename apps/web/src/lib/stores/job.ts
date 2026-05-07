@@ -1,10 +1,10 @@
 import { writable, get } from 'svelte/store';
-import type { Job, Clip, JobStatus } from '@aicr/shared';
-import { getJob, getClips, createExport, getExport, API_BASE } from '$lib/api';
+import type { Job, ClipResponse, JobStatus } from '@aicr/shared';
+import { getJob, getClips, API_BASE } from '$lib/api';
 
 interface JobStore {
   job: Job | null;
-  clips: Clip[];
+  clips: ClipResponse[];
   status: JobStatus | 'pending';
   error: string | null;
   eventSource: EventSource | null;
@@ -84,44 +84,20 @@ async function initializeJob(jobId: string) {
   subscribeToSSE(jobId);
 }
 
-function updateClip(clipId: string, updates: Partial<Clip>) {
+function updateClip(clipId: string, updates: Partial<ClipResponse>) {
   state.update(s => {
     const clipIndex = s.clips.findIndex(c => c.id === clipId);
     if (clipIndex !== -1) {
       const newClips = [...s.clips];
-      newClips[clipIndex] = { ...newClips[clipIndex], ...updates };
+      newClips[clipIndex] = { ...newClips[clipIndex]!, ...updates };
       return { ...s, clips: newClips };
     }
     return s;
   });
 }
 
-async function exportClip(clipId: string) {
-  updateClip(clipId, { exportStatus: 'processing' });
-
-  try {
-    const { exportId } = await createExport(clipId);
-
-    const poll = setInterval(async () => {
-      try {
-        const result = await getExport(clipId, exportId);
-        if (result.status === 'ready' && result.exportUrl) {
-          updateClip(clipId, { exportUrl: result.exportUrl, exportStatus: 'ready' });
-          clearInterval(poll);
-          // Consider auto-downloading or showing a notification
-        } else if (result.status === 'error') {
-          updateClip(clipId, { exportStatus: 'error' });
-          clearInterval(poll);
-        }
-      } catch (e) {
-        updateClip(clipId, { exportStatus: 'error' });
-        clearInterval(poll);
-      }
-    }, 5000);
-  } catch (e) {
-    updateClip(clipId, { exportStatus: 'error' });
-  }
-}
+// Export flow removed — Reap provides clipUrl directly on ClipResponse.
+// No separate export step needed.
 
 function clear() {
   disconnect();
@@ -151,6 +127,5 @@ export const jobStore = {
   subscribeToSSE,
   disconnect,
   updateClip,
-  exportClip,
   clear,
 };

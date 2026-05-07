@@ -1,8 +1,9 @@
 <script lang="ts">
-  import type { Clip } from '@aicr/shared';
+  import type { Clip, ClipResponse } from '@aicr/shared';
   import ClipCard from './ClipCard.svelte';
 
-  let { clips, onExport, exportingClipId = null }: { clips: Clip[]; onExport: (clip: Clip) => void; exportingClipId?: string | null } = $props();
+  type ClipLike = Clip | ClipResponse;
+  let { clips, onExport, exportingClipId = null }: { clips: Clip[]; onExport: (clip: ClipLike) => void; exportingClipId?: string | null } = $props();
 </script>
 
 <div class="space-y-6">
