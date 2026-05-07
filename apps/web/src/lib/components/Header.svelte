@@ -27,9 +27,9 @@
 </script>
 
 <header class="border-b border-[var(--border)] px-4 sm:px-8 py-3 sm:py-4 flex justify-between items-center">
-  <a href="/" class="font-['Plus_Jakarta_Sans'] text-xl sm:text-2xl font-black tracking-tight transition-colors">
+  <button onclick={() => viewStore.toLanding()} class="font-['Plus_Jakarta_Sans'] text-xl sm:text-2xl font-black tracking-tight transition-colors">
     AICR
-  </a>
+  </button>
   <div class="flex gap-2 sm:gap-4 items-center">
     <button onclick={toggleTheme} class="text-sm">
       {isDark ? '☀️' : '🌙'}

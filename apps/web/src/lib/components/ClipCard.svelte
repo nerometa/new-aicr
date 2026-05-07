@@ -30,7 +30,7 @@
   <div class="p-4 border-t border-[var(--border)] bg-[var(--bg)]">
     <p class="text-xs text-[var(--muted)] mb-1 truncate">{clip.title || 'Untitled Clip'}</p>
     <p class="text-[var(--accent)] text-sm font-bold mb-2">
-      VIRALITY: {clip.viralityScore != null ? clip.viralityScore.toFixed(1) : '—'}/10
+      VIRALITY: {clip.viralityScore != null ? (clip.viralityScore / 10).toFixed(1) : '—'}/10
     </p>
     {#if clip.viralityScoreExplanation}
       <p class="text-xs text-gray-500 mb-4 line-clamp-2">{clip.viralityScoreExplanation}</p>

@@ -8,6 +8,7 @@ export interface Job {
   userId: string | null; // null for anonymous jobs
   youtubeUrl: string;
   providerProjectId: string | null;
+  provider: string;
   status: JobStatus;
   errorMessage: string | null;
   createdAt: Date;
@@ -35,6 +36,7 @@ export interface JobResponse {
   id: string;
   status: JobStatus;
   youtubeUrl: string;
+  provider: string;
   errorMessage?: string | null;
 }
 

@@ -98,9 +98,14 @@
               <p class="text-xs sm:text-sm truncate font-semibold flex-1 mr-2 text-[var(--fg)] line-clamp-2">{jobTitles[job.id] || job.youtubeUrl}</p>
               <span class={`text-[8px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full border font-bold uppercase ${statusColor(job.status)}`}>{job.status}</span>
             </div>
-            <p class="text-[8px] sm:text-[10px] text-[var(--muted)]">
-              {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : ''}
-            </p>
+            <div class="flex items-center justify-between mt-1">
+              <p class="text-[8px] sm:text-[10px] text-[var(--muted)]">
+                {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : ''}
+              </p>
+              {#if job.provider}
+                <span class="text-[8px] sm:text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--muted)] font-mono uppercase">{job.provider}</span>
+              {/if}
+            </div>
           </button>
         {/each}
       </div>
