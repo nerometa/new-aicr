@@ -3,7 +3,7 @@ import { db } from '../db/client';
 import { jobs } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { getProvider } from '../services/providers';
-import { processCompletedJob } from '../services/poller';
+import { completeJob, failJob } from '../services/completion';
 import { redis } from '../lib/redis';
 
 const QUEUE_KEY = 'aicr:polling_jobs';
@@ -70,15 +70,14 @@ async function handleReapEvent(payload: ReapWebhookPayload): Promise<void> {
   }
 
   if (verifiedStatus === 'failed') {
-    await db.update(jobs)
-      .set({ status: 'error', errorMessage: 'Provider processing failed', updatedAt: new Date() })
-      .where(eq(jobs.id, job.id));
+    await failJob(job.id, 'Provider processing failed');
     await redis.srem(QUEUE_KEY, job.id);
     console.log(`[Webhook] Job ${job.id} marked failed`);
     return;
   }
 
   // verifiedStatus === 'completed'
-  await processCompletedJob(job.id);
+  await completeJob(job.id);
+  await redis.srem(QUEUE_KEY, job.id);
   console.log(`[Webhook] Job ${job.id} processed via webhook`);
 }

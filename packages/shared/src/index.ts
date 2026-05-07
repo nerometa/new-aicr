@@ -51,6 +51,8 @@ export interface ClipResponse {
   endTime: number | null;
   // Ephemeral — fetched live from provider, null when project expired
   clipUrl: string | null;
+  // Flag: true when provider call failed (e.g., project expired)
+  urlExpired?: boolean;
 }
 
 export interface SSEResponse {

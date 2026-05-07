@@ -1,9 +1,9 @@
 import { Elysia } from 'elysia';
 import { db } from '../db/client';
-import { clips, jobs, user } from '../db/schema';
+import { jobs, user } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '../lib/auth';
-import { getProvider } from '../services/providers';
+import { resolveClipUrls } from '../services/clip-resolver';
 
 async function resolveUserId(headers: Headers): Promise<string | null> {
   try {
@@ -32,35 +32,11 @@ export const clipsRoute = new Elysia({ prefix: '/api/clips' })
       return { error: 'Forbidden', message: 'You do not have access to this job' };
     }
 
-    const jobClips = await db.select().from(clips).where(eq(clips.jobId, params.jobId));
-    if (jobClips.length === 0) {
-      return [];
-    }
+    // Use ClipResolver to get clips with resolved URLs
+    const clips = await resolveClipUrls(params.jobId);
 
-    // Build URL map: prefer stored clipUrl (Reka), fall back to live fetch (Reap).
-    let urlMap = new Map<string, string>();
-
-    // First: populate from stored clipUrls — no provider call needed
-    for (const c of jobClips) {
-      if (c.clipUrl) urlMap.set(c.providerClipId, c.clipUrl);
-    }
-
-    // If any clips still missing a URL and we have a providerProjectId, fetch live
-    const missingUrls = jobClips.some(c => !urlMap.has(c.providerClipId));
-    if (missingUrls && job.providerProjectId) {
-      try {
-        const provider = getProvider(job.provider);
-        const liveMap = await provider.getClipUrls(job.providerProjectId);
-        for (const [id, url] of liveMap) {
-          if (!urlMap.has(id)) urlMap.set(id, url);
-        }
-      } catch (err) {
-        console.error(`[Clips] Failed to fetch clip URLs for job ${params.jobId}:`, err);
-        // Return metadata without URLs — project may be expired
-      }
-    }
-
-    return jobClips.map(c => ({
+    // Map to response shape
+    return clips.map(c => ({
       id: c.id,
       jobId: c.jobId,
       title: c.title,
@@ -68,7 +44,9 @@ export const clipsRoute = new Elysia({ prefix: '/api/clips' })
       duration: c.duration,
       startTime: c.startTime,
       endTime: c.endTime,
-      // null when project expired or provider unreachable
-      clipUrl: urlMap.get(c.providerClipId) ?? null,
+      // clipUrl is null when project expired or provider unreachable
+      clipUrl: c.clipUrl,
+      // urlExpired flag signals frontend that URL is unavailable due to expiry
+      urlExpired: c.urlExpired,
     }));
   });

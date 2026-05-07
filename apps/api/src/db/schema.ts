@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 // ============================================
@@ -86,7 +86,10 @@ export const clips = sqliteTable('clips', {
   // Null for Reap — URLs fetched live via getClipUrls.
   clipUrl: text('clip_url'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+  // Unique constraint: one clip per job from each provider (idempotent retries)
+  uniqueJobClip: uniqueIndex('clips_job_provider_unique').on(table.jobId, table.providerClipId),
+}));
 
 export const experiments = sqliteTable('experiments', {
   id: text('id').primaryKey(),
