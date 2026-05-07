@@ -2,7 +2,7 @@ import { redis } from '../lib/redis';
 import { db } from '../db/client';
 import { jobs, clips } from '../db/schema';
 import { eq } from 'drizzle-orm';
-import { provider } from './providers';
+import { getProvider } from './providers';
 import { randomUUID } from 'crypto';
 
 const QUEUE_KEY = 'aicr:polling_jobs';
@@ -26,6 +26,7 @@ export const processCompletedJob = async (jobId: string): Promise<void> => {
     return;
   }
 
+  const provider = getProvider(job.provider);
   const providerClips = await provider.getClips(job.providerProjectId);
 
   await db.update(jobs)
@@ -43,6 +44,7 @@ export const processCompletedJob = async (jobId: string): Promise<void> => {
       duration: c.duration,
       startTime: c.startTime,
       endTime: c.endTime,
+      clipUrl: c.clipUrl ?? null,
       createdAt: new Date(),
     }).onConflictDoNothing();
   }
@@ -60,6 +62,7 @@ const pollJob = async (jobId: string): Promise<void> => {
       return;
     }
 
+    const provider = getProvider(job.provider);
     const status = await provider.getProjectStatus(job.providerProjectId);
 
     if (status === 'processing') return;

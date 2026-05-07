@@ -2,7 +2,7 @@ import { Elysia, t } from 'elysia';
 import { db } from '../db/client';
 import { jobs, user } from '../db/schema';
 import { eq } from 'drizzle-orm';
-import { provider } from '../services/providers';
+import { getProvider, PROVIDER_NAMES } from '../services/providers';
 import { auth } from '../lib/auth';
 import { enqueueJob } from '../services/poller';
 import { randomUUID } from 'crypto';
@@ -12,8 +12,6 @@ import { sanitizeYouTubeUrl } from '../lib/youtube';
 // Constants
 const RATE_LIMIT_JOBS_PER_HOUR = 10;
 const RATE_LIMIT_WINDOW_SEC = 3600;
-
-// Job status: pending -> processing -> ready | error
 
 async function isRateLimited(ip: string): Promise<boolean> {
   const key = `rate_limit:${ip}`;
@@ -56,16 +54,29 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       return { error: 'Invalid URL', message: 'Please provide a valid YouTube URL' };
     }
 
+    const providerName = body.provider ?? 'reap';
+
+    // Validate against registry — fast-fail before any provider call
+    if (!PROVIDER_NAMES.includes(providerName as any)) {
+      set.status = 400;
+      return {
+        error: 'Invalid provider',
+        message: `Unknown provider "${providerName}". Valid options: ${PROVIDER_NAMES.join(', ')}`,
+      };
+    }
+
     const dbUserId = await resolveUserId(request.headers);
     const jobId = randomUUID();
 
     try {
+      const provider = getProvider(providerName);
       const providerProjectId = await provider.createProject(sanitizedUrl);
 
       await db.insert(jobs).values({
         id: jobId,
         userId: dbUserId,
         youtubeUrl: sanitizedUrl,
+        provider: providerName,
         providerProjectId,
         status: 'pending',
         createdAt: new Date(),
@@ -73,8 +84,8 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       });
 
       await enqueueJob(jobId);
-      console.log(`[Jobs] Created job ${jobId} for ${sanitizedUrl}`);
-      return { id: jobId, status: 'pending', youtubeUrl: sanitizedUrl };
+      console.log(`[Jobs] Created job ${jobId} via ${providerName} for ${sanitizedUrl}`);
+      return { id: jobId, status: 'pending', youtubeUrl: sanitizedUrl, provider: providerName };
     } catch (error) {
       console.error('Job creation error:', error);
       set.status = 500;
@@ -84,7 +95,10 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       };
     }
   }, {
-    body: t.Object({ youtubeUrl: t.String() }),
+    body: t.Object({
+      youtubeUrl: t.String(),
+      provider: t.Optional(t.Union([t.Literal('reap'), t.Literal('reka')])),
+    }),
   })
 
   .get('/:id', async ({ params, set }) => {
@@ -97,6 +111,7 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       id: job.id,
       status: job.status,
       youtubeUrl: job.youtubeUrl,
+      provider: job.provider,
       errorMessage: job.errorMessage,
     };
   })
@@ -108,7 +123,7 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       return { error: 'Unauthorized', message: 'Authentication required to view jobs' };
     }
     const userJobs = await db.select().from(jobs).where(eq(jobs.userId, dbUserId));
-    return userJobs.map(j => ({ id: j.id, status: j.status, youtubeUrl: j.youtubeUrl }));
+    return userJobs.map(j => ({ id: j.id, status: j.status, youtubeUrl: j.youtubeUrl, provider: j.provider }));
   })
 
   .get('/sse/:jobId', ({ params, set, signal }) => {

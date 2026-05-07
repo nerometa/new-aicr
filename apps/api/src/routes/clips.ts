@@ -3,7 +3,7 @@ import { db } from '../db/client';
 import { clips, jobs, user } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '../lib/auth';
-import { provider } from '../services/providers';
+import { getProvider } from '../services/providers';
 
 async function resolveUserId(headers: Headers): Promise<string | null> {
   try {
@@ -37,14 +37,26 @@ export const clipsRoute = new Elysia({ prefix: '/api/clips' })
       return [];
     }
 
-    // Fetch live URLs from provider. Fails gracefully if project expired.
+    // Build URL map: prefer stored clipUrl (Reka), fall back to live fetch (Reap).
     let urlMap = new Map<string, string>();
-    if (job.providerProjectId) {
+
+    // First: populate from stored clipUrls — no provider call needed
+    for (const c of jobClips) {
+      if (c.clipUrl) urlMap.set(c.providerClipId, c.clipUrl);
+    }
+
+    // If any clips still missing a URL and we have a providerProjectId, fetch live
+    const missingUrls = jobClips.some(c => !urlMap.has(c.providerClipId));
+    if (missingUrls && job.providerProjectId) {
       try {
-        urlMap = await provider.getClipUrls(job.providerProjectId);
+        const provider = getProvider(job.provider);
+        const liveMap = await provider.getClipUrls(job.providerProjectId);
+        for (const [id, url] of liveMap) {
+          if (!urlMap.has(id)) urlMap.set(id, url);
+        }
       } catch (err) {
         console.error(`[Clips] Failed to fetch clip URLs for job ${params.jobId}:`, err);
-        // Return metadata without URLs rather than erroring — project may be expired
+        // Return metadata without URLs — project may be expired
       }
     }
 

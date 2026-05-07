@@ -2,7 +2,7 @@ import { Elysia } from 'elysia';
 import { db } from '../db/client';
 import { jobs } from '../db/schema';
 import { eq } from 'drizzle-orm';
-import { provider } from '../services/providers';
+import { getProvider } from '../services/providers';
 import { processCompletedJob } from '../services/poller';
 import { redis } from '../lib/redis';
 
@@ -15,6 +15,7 @@ interface ReapWebhookPayload {
   status: string;
 }
 
+// Reap-only webhook endpoint. Reka has no webhook support — poller handles it.
 export const webhooksRoute = new Elysia({ prefix: '/api/webhooks' })
   .post('/reap', async ({ body, set }) => {
     // Return 200 immediately — Reap requires empty body within 10s.
@@ -26,7 +27,6 @@ export const webhooksRoute = new Elysia({ prefix: '/api/webhooks' })
       return '';
     }
 
-    // Don't await — process async so response returns immediately.
     handleReapEvent(payload).catch(err =>
       console.error('[Webhook] Unhandled error:', err),
     );
@@ -36,12 +36,17 @@ export const webhooksRoute = new Elysia({ prefix: '/api/webhooks' })
   });
 
 async function handleReapEvent(payload: ReapWebhookPayload): Promise<void> {
-  const { projectId, status: reportedStatus } = payload;
+  const { projectId } = payload;
 
-  // Find job by providerProjectId
+  // Find job by providerProjectId — must be a Reap job
   const [job] = await db.select().from(jobs).where(eq(jobs.providerProjectId, projectId));
   if (!job) {
     console.warn(`[Webhook] No job found for providerProjectId=${projectId}`);
+    return;
+  }
+
+  if (job.provider !== 'reap') {
+    console.warn(`[Webhook] Received Reap webhook for non-Reap job ${job.id} (provider=${job.provider})`);
     return;
   }
 
@@ -53,6 +58,7 @@ async function handleReapEvent(payload: ReapWebhookPayload): Promise<void> {
   // Re-verify status from provider — never trust payload blindly.
   let verifiedStatus: 'processing' | 'completed' | 'failed';
   try {
+    const provider = getProvider(job.provider);
     verifiedStatus = await provider.getProjectStatus(projectId);
   } catch (err) {
     console.error(`[Webhook] Failed to verify status for job ${job.id}:`, err);
@@ -60,7 +66,6 @@ async function handleReapEvent(payload: ReapWebhookPayload): Promise<void> {
   }
 
   if (verifiedStatus === 'processing') {
-    // Provider says still processing — payload was premature or stale. Ignore.
     return;
   }
 

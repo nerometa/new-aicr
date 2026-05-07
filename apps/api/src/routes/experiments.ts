@@ -1,7 +1,7 @@
 import { Elysia, type Static } from 'elysia';
 import { db } from '../db/client';
 import { jobs, experiments, clips } from '../db/schema';
-import { provider } from '../services/providers';
+import { getProvider } from '../services/providers';
 import type { ClipConfig } from '../services/providers';
 import { enqueueJob } from '../services/poller';
 import { randomUUID } from 'crypto';
@@ -19,7 +19,7 @@ function toClipConfig(config: ConfigType): ClipConfig {
     clipDuration: config.clipDuration,
     orientation: config.orientation,
     captions: config.captions,
-    emojis: config.emojis,
+    // emojis intentionally omitted — Reap-internal only, not in ClipConfig
   };
 }
 
@@ -29,7 +29,6 @@ function configLabel(config: ConfigType): string {
   if (config.clipDuration) parts.push(`dur-${config.clipDuration}`);
   if (config.orientation) parts.push(config.orientation);
   if (config.captions !== undefined) parts.push(config.captions ? 'caps' : 'no-caps');
-  if (config.emojis !== undefined) parts.push(config.emojis ? 'emojis' : 'no-emojis');
   return parts.join('-') || 'default';
 }
 
@@ -83,6 +82,16 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
       return { error: 'Invalid URL', message: 'Could not extract video ID from URL' };
     }
 
+    const providerName = typedBody.provider;
+    // Resolve provider early — fail fast if key missing or unknown
+    let provider;
+    try {
+      provider = getProvider(providerName);
+    } catch {
+      set.status = 400;
+      return { error: 'Invalid provider', message: `Unknown provider: ${providerName}` };
+    }
+
     const experimentId = randomUUID();
     const now = new Date();
 
@@ -91,6 +100,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
       userId: authenticatedUserId,
       sourceVideoUrl: sanitizedUrl,
       sourceVideoId: videoId,
+      provider: providerName,
       name: typedBody.name,
       description: typedBody.description ?? null,
       status: 'pending',
@@ -116,6 +126,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
           userId: authenticatedUserId,
           experimentId,
           youtubeUrl: sanitizedUrl,
+          provider: providerName,
           providerProjectId,
           status: 'pending',
           createdAt: now,
@@ -125,7 +136,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
         await enqueueJob(jobId);
         jobIds.push(jobId);
       } catch (error) {
-        console.error(`[Experiments] Failed to create job for config ${i}:`, error);
+        console.error(`[Experiments] Failed to create job for config ${i} (${configLabel(config)}):`, error);
         errors.push({
           configIndex: i,
           error: error instanceof Error ? error.message : 'Unknown error',
@@ -147,6 +158,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
 
     return {
       id: experimentId,
+      provider: providerName,
       status: 'pending',
       jobIds,
       errors: errors.length > 0 ? errors : undefined,
@@ -178,6 +190,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
         id: e.id,
         name: e.name,
         description: e.description,
+        provider: e.provider,
         status: computedStatus,
         sourceVideoUrl: e.sourceVideoUrl,
         createdAt: e.createdAt,
@@ -301,7 +314,7 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
 
     const header = [
       'experiment_name', 'experiment_description', 'experiment_status',
-      'source_video_url', 'job_id', 'job_status', 'job_error',
+      'provider', 'source_video_url', 'job_id', 'job_status', 'job_error',
       'clip_title', 'virality_score', 'virality_score_explanation',
       'duration', 'start_time', 'end_time',
     ].map(csvEscape).join(',');
@@ -313,7 +326,8 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
       if (jobClips.length === 0) {
         rows.push([
           csvEscape(experiment.name), csvEscape(experiment.description),
-          csvEscape(experiment.status), csvEscape(experiment.sourceVideoUrl),
+          csvEscape(experiment.status), csvEscape(experiment.provider),
+          csvEscape(experiment.sourceVideoUrl),
           csvEscape(job.id), csvEscape(job.status), csvEscape(job.errorMessage),
           '', '', '', '', '', '',
         ].join(','));
@@ -321,7 +335,8 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
         for (const clip of jobClips) {
           rows.push([
             csvEscape(experiment.name), csvEscape(experiment.description),
-            csvEscape(experiment.status), csvEscape(experiment.sourceVideoUrl),
+            csvEscape(experiment.status), csvEscape(experiment.provider),
+            csvEscape(experiment.sourceVideoUrl),
             csvEscape(job.id), csvEscape(job.status), csvEscape(job.errorMessage),
             csvEscape(clip.title), csvEscape(clip.viralityScore),
             csvEscape(clip.viralityScoreExplanation),

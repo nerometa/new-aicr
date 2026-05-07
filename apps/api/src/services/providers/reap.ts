@@ -6,7 +6,7 @@ const TIMEOUT_MS = 30_000;
 
 // ─── Default config ──────────────────────────────────────────────────────────
 // Baked in as a const — not env vars, not DB config.
-// Change here to affect all jobs that don't pass an explicit ClipConfig.
+// emojis lives here only — not in shared ClipConfig (Reka has no equivalent).
 export const DEFAULT_CLIP_CONFIG = {
   clipDurations: [[0, 30]] as [number, number][],
   exportOrientation: 'portrait' as const,
@@ -104,7 +104,8 @@ function buildRequestBody(
     reframeClips: DEFAULT_CLIP_CONFIG.reframeClips,
     captionsPreset: DEFAULT_CLIP_CONFIG.captionsPreset,
     enableCaptions: config?.captions ?? DEFAULT_CLIP_CONFIG.enableCaptions,
-    enableEmojis: config?.emojis ?? DEFAULT_CLIP_CONFIG.enableEmojis,
+    // emojis always from internal default — not exposed via ClipConfig
+    enableEmojis: DEFAULT_CLIP_CONFIG.enableEmojis,
     clipDurations,
   };
 }
@@ -151,11 +152,14 @@ async function getClips(providerProjectId: string): Promise<ProviderClip[]> {
   ).map((c) => ({
     providerClipId: c.id,
     title: c.title ?? null,
-    viralityScore: c.viralityScore ?? null,
-    viralityScoreExplanation: null, // Reap doesn't return this field
+    // Normalize 0–10 → 0–100
+    viralityScore: c.viralityScore != null ? c.viralityScore * 10 : null,
+    viralityScoreExplanation: null,
     duration: c.duration ?? null,
     startTime: c.startTime ?? null,
     endTime: c.endTime ?? null,
+    // Reap URLs are ephemeral — fetched live via getClipUrls, never stored
+    clipUrl: null,
   }));
 }
 

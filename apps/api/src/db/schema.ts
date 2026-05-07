@@ -61,7 +61,9 @@ export const jobs = sqliteTable('jobs', {
   userId: text('user_id').references(() => user.id),
   experimentId: text('experiment_id').references(() => experiments.id),
   youtubeUrl: text('youtube_url').notNull(),
-  // Opaque ID assigned by the active provider (Reap project ID, etc.)
+  // Which adapter owns this job — immutable after creation
+  provider: text('provider').notNull().default('reap'),
+  // Opaque ID assigned by the provider (Reap project ID, Reka clip job ID, etc.)
   providerProjectId: text('provider_project_id'),
   status: text('status').notNull().default('pending'),
   errorMessage: text('error_message'),
@@ -80,6 +82,9 @@ export const clips = sqliteTable('clips', {
   duration: real('duration'),
   startTime: real('start_time'),
   endTime: real('end_time'),
+  // Populated at completion for providers that return stable URLs (Reka).
+  // Null for Reap — URLs fetched live via getClipUrls.
+  clipUrl: text('clip_url'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
@@ -88,6 +93,8 @@ export const experiments = sqliteTable('experiments', {
   userId: text('user_id').notNull().references(() => user.id),
   sourceVideoUrl: text('source_video_url').notNull(),
   sourceVideoId: text('source_video_id').notNull(),
+  // Provider fixed at experiment level — all variants use same provider
+  provider: text('provider').notNull().default('reap'),
   name: text('name').notNull(),
   description: text('description'),
   status: text('status').notNull().default('pending'),

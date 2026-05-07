@@ -3,12 +3,11 @@
   import { toast } from '$lib/toast';
   import { createEventDispatcher } from 'svelte';
 
-  // Matches backend Configuration schema exactly
+  // emojis removed — Reap-only internal config, not in shared ClipConfig
   type ConfigForm = {
     clipDuration: 30 | 60 | 90;
     orientation: 'portrait' | 'landscape' | 'square';
     captions: boolean;
-    emojis: boolean;
   };
 
   const dispatch = createEventDispatcher<{ created: { experimentId: string } }>();
@@ -17,12 +16,12 @@
     clipDuration: 30,
     orientation: 'portrait',
     captions: true,
-    emojis: false,
   });
 
   let videoUrl = '';
   let name = '';
   let description = '';
+  let provider: 'reap' | 'reka' = 'reap';
   let configs: ConfigForm[] = [defaultConfig()];
   let loading = false;
   let error: string | null = null;
@@ -55,6 +54,7 @@
           sourceVideoUrl: videoUrl,
           name,
           description: description || undefined,
+          provider,
           configurations: configs,
         }),
       });
@@ -69,6 +69,7 @@
       videoUrl = '';
       name = '';
       description = '';
+      provider = 'reap';
       configs = [defaultConfig()];
       dispatch('created', { experimentId: payload.id });
     } catch (e) {
@@ -92,10 +93,23 @@
     </span>
   </header>
 
-  <!-- Provider badge — Reap is the only active provider -->
-  <div class="flex items-center gap-2">
-    <span class="text-xs text-[var(--muted)] font-semibold uppercase tracking-[0.2em]">Provider</span>
-    <span class="rounded-full border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1 text-xs font-semibold text-[var(--accent)]">Reap</span>
+  <!-- Provider selection — fixed for all variants in this experiment -->
+  <div class="flex items-center gap-3">
+    <span class="text-xs font-semibold text-[var(--fg)] uppercase tracking-[0.2em]">Provider</span>
+    <div class="flex gap-1">
+      {#each (['reap', 'reka'] as const) as p}
+        <button
+          type="button"
+          on:click={() => (provider = p)}
+          class="px-3 py-1 rounded-full text-xs font-semibold transition-colors duration-150 {provider === p
+            ? 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/40'
+            : 'text-[var(--muted)] border border-[var(--border)] hover:border-[var(--accent)]/30'}"
+        >
+          {p.charAt(0).toUpperCase() + p.slice(1)}
+        </button>
+      {/each}
+    </div>
+    <span class="text-xs text-[var(--muted)]">All variants use the same provider</span>
   </div>
 
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -190,15 +204,6 @@
               class="h-4 w-4 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--accent)] focus:ring-[var(--accent)] focus:ring-offset-0 focus:ring-2 focus:ring-[var(--accent)]/30"
             />
             <span class="text-sm">Captions</span>
-          </label>
-          <label class="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 transition-colors duration-150 hover:border-[var(--accent)]/50 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={config.emojis}
-              on:change={(e) => setConfigValue(index, 'emojis', e.currentTarget.checked)}
-              class="h-4 w-4 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--accent)] focus:ring-[var(--accent)] focus:ring-offset-0 focus:ring-2 focus:ring-[var(--accent)]/30"
-            />
-            <span class="text-sm">Emojis in captions</span>
           </label>
         </fieldset>
       </article>

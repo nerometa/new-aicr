@@ -1,15 +1,26 @@
-// Provider factory — resolved once at boot.
-// To add a new provider: implement ClipProvider, import here, add to the map.
+// Provider registry — built at boot from available API keys.
+// To add a provider: implement ClipProvider, import here, add to factory.
+// Domain code uses getProvider(job.provider) — never the old singleton.
 
 import type { ClipProvider } from './types';
 import { reapProvider } from './reap';
+import { rekaProvider } from './reka';
 
 const PROVIDERS: Record<string, ClipProvider> = {
   reap: reapProvider,
+  reka: rekaProvider,
 };
 
-const ACTIVE_PROVIDER = 'reap';
+export const PROVIDER_NAMES = Object.keys(PROVIDERS) as Array<keyof typeof PROVIDERS>;
 
-export const provider: ClipProvider = PROVIDERS[ACTIVE_PROVIDER]!;
+/**
+ * Resolve a provider by name. Throws if name is not registered.
+ * Call sites: poller, webhook handler, clips route, jobs route, experiments route.
+ */
+export function getProvider(name: string): ClipProvider {
+  const p = PROVIDERS[name];
+  if (!p) throw new Error(`Unknown provider: ${name}`);
+  return p;
+}
 
 export type { ClipProvider, ClipConfig, ProviderClip } from './types';

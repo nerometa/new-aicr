@@ -28,10 +28,12 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 // Jobs
-export const createJob = (youtubeUrl: string) =>
+export const createJob = (youtubeUrl: string, provider: 'reap' | 'reka' = 'reap') =>
   apiFetch<JobResponse>('/api/jobs', {
     method: 'POST',
-    body: JSON.stringify({ youtubeUrl } as CreateJobRequest),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ youtubeUrl, provider }),
+    credentials: 'include',
   });
 
 export const getJob = (id: string) =>

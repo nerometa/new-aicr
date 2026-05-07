@@ -33,8 +33,12 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().url('CORS_ORIGIN must be a valid URL (frontend URL allowed to make requests)'),
   OWNER_USER_ID: z.string().min(1),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
-});
 
+  // ============================================
+  // Reka Vision API (AI video clipping provider)
+  // ============================================
+  REKA_API_KEY: z.string().min(1, 'REKA_API_KEY is required'),
+});
 // Startup-time validation for mandatory env var (production)
 const rawOwnerUserId = process.env.OWNER_USER_ID;
 if (rawOwnerUserId == null || String(rawOwnerUserId).trim() === '') {

@@ -71,12 +71,12 @@ describe('Reap adapter - createProject', () => {
         clipDuration: 60,
         orientation: 'landscape',
         captions: false,
-        emojis: true,
+        // emojis removed from ClipConfig — Reap-internal only, always false
       });
       expect(capturedBody.clipDurations).toEqual([[30, 60]]);
       expect(capturedBody.exportOrientation).toBe('landscape');
       expect(capturedBody.enableCaptions).toBe(false);
-      expect(capturedBody.enableEmojis).toBe(true);
+      expect(capturedBody.enableEmojis).toBe(false);
     } finally {
       (globalThis as any).fetch = originalFetch;
     }
@@ -142,7 +142,7 @@ describe('Reap adapter - getClips', () => {
       expect(clips).toHaveLength(1);
       expect(clips[0]!.providerClipId).toBe('clip_001');
       expect(clips[0]!.title).toBe('Great moment');
-      expect(clips[0]!.viralityScore).toBe(8.5);
+      expect(clips[0]!.viralityScore).toBe(85); // 8.5 × 10 = 85 (normalized to 0–100)
       expect(clips[0]!.duration).toBe(29.7);
       expect(clips[0]!.startTime).toBe(10.5);
       expect(clips[0]!.endTime).toBe(40.2);
@@ -177,11 +177,11 @@ describe('Reap adapter - getClips', () => {
       const { reapProvider } = await import('./providers/reap');
       const clips = await reapProvider.getClips('proj_001');
       expect(clips).toHaveLength(5);
-      expect(clips[0]!.viralityScore).toBe(5);
-      expect(clips[1]!.viralityScore).toBe(4);
-      expect(clips[2]!.viralityScore).toBe(3);
-      expect(clips[3]!.viralityScore).toBe(2);
-      expect(clips[4]!.viralityScore).toBe(1);
+      expect(clips[0]!.viralityScore).toBe(50); // 5 × 10
+      expect(clips[1]!.viralityScore).toBe(40); // 4 × 10
+      expect(clips[2]!.viralityScore).toBe(30); // 3 × 10
+      expect(clips[3]!.viralityScore).toBe(20); // 2 × 10
+      expect(clips[4]!.viralityScore).toBe(10); // 1 × 10
     } finally {
       (globalThis as any).fetch = originalFetch;
     }
@@ -214,11 +214,12 @@ describe('Reap adapter - getClipUrls', () => {
 });
 
 describe('Provider factory', () => {
-  it('exports a ClipProvider instance', async () => {
-    const { provider } = await import('./providers/index');
-    expect(typeof provider.createProject).toBe('function');
-    expect(typeof provider.getProjectStatus).toBe('function');
-    expect(typeof provider.getClips).toBe('function');
-    expect(typeof provider.getClipUrls).toBe('function');
+  it('exports getProvider fn and reap provider', async () => {
+    const { getProvider } = await import('./providers/index');
+    const reap = getProvider('reap');
+    expect(typeof reap.createProject).toBe('function');
+    expect(typeof reap.getProjectStatus).toBe('function');
+    expect(typeof reap.getClips).toBe('function');
+    expect(typeof reap.getClipUrls).toBe('function');
   });
 });
