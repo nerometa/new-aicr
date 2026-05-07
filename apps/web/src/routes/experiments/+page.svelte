@@ -58,7 +58,7 @@
       'bg-[var(--border)] text-[var(--muted)]';
   };
 
-  const sectionItems = (status: ExperimentStatus) => experiments.filter((exp) => exp.status === status);
+  const sectionItems = (status: string) => experiments.filter((exp) => exp.status === status);
 
   const formatDate = (value: string) => {
     try {

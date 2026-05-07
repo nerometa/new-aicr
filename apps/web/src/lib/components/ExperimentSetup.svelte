@@ -3,24 +3,21 @@
   import { toast } from '$lib/toast';
   import { createEventDispatcher } from 'svelte';
 
+  // Matches backend Configuration schema exactly
   type ConfigForm = {
-    maxDuration?: number;
-    maxClipCount?: number;
-    aspectRatio: string;
+    clipDuration: 30 | 60 | 90;
+    orientation: 'portrait' | 'landscape' | 'square';
     captions: boolean;
     emojis: boolean;
-    removeSilences: boolean;
   };
 
   const dispatch = createEventDispatcher<{ created: { experimentId: string } }>();
 
   const defaultConfig = (): ConfigForm => ({
-    maxDuration: 60,
-    maxClipCount: 3,
-    aspectRatio: '9:16',
+    clipDuration: 30,
+    orientation: 'portrait',
     captions: true,
-    emojis: true,
-    removeSilences: false,
+    emojis: false,
   });
 
   let videoUrl = '';
@@ -30,58 +27,19 @@
   let loading = false;
   let error: string | null = null;
 
-  const setConfigValue = (index: number, key: keyof ConfigForm, value: ConfigForm[keyof ConfigForm]) => {
-    configs = configs.map((cfg, cfgIndex) =>
-      cfgIndex === index ? { ...cfg, [key]: value } : cfg
-    );
+  const setConfigValue = <K extends keyof ConfigForm>(index: number, key: K, value: ConfigForm[K]) => {
+    configs = configs.map((cfg, i) => i === index ? { ...cfg, [key]: value } : cfg);
   };
 
-  const addConfig = () => {
-    configs = [...configs, defaultConfig()];
-  };
-
+  const addConfig = () => { configs = [...configs, defaultConfig()]; };
   const removeConfig = (index: number) => {
     if (configs.length === 1) return;
-    configs = configs.filter((_, cfgIndex) => cfgIndex !== index);
-  };
-
-  const formatConfigs = () => {
-    return configs
-      .map((cfg) => {
-        const formatted: Record<string, unknown> = {};
-        if (cfg.maxDuration && cfg.maxDuration > 0) {
-          formatted.max_duration = cfg.maxDuration;
-        }
-        if (cfg.maxClipCount && cfg.maxClipCount > 0) {
-          formatted.max_clip_count = cfg.maxClipCount;
-        }
-
-        const editingOptions: Record<string, boolean> = {};
-        if (cfg.captions) editingOptions.captions = true;
-        if (cfg.emojis) editingOptions.emojis = true;
-        if (cfg.removeSilences) editingOptions.remove_silences = true;
-        if (Object.keys(editingOptions).length > 0) {
-          formatted.editing_options = editingOptions;
-        }
-
-        if (cfg.aspectRatio) {
-          formatted.dimensions = { aspectRatio: cfg.aspectRatio };
-        }
-
-        return Object.keys(formatted).length > 0 ? formatted : null;
-      })
-      .filter((cfg) => cfg) as Array<Record<string, unknown>>;
+    configs = configs.filter((_, i) => i !== index);
   };
 
   async function handleSubmit() {
     if (!videoUrl.trim() || !name.trim()) {
       error = 'Video URL and experiment name are required.';
-      return;
-    }
-
-    const validConfigs = formatConfigs();
-    if (validConfigs.length === 0) {
-      error = 'Each variant needs at least a duration or max clip count.';
       return;
     }
 
@@ -97,7 +55,7 @@
           sourceVideoUrl: videoUrl,
           name,
           description: description || undefined,
-          configurations: validConfigs,
+          configurations: configs,
         }),
       });
 
@@ -107,17 +65,15 @@
         throw new Error(payload.error ?? payload.message ?? 'Failed to create experiment.');
       }
 
-      toast.success('Experiment created successfully!');
-
+      toast.success('Experiment created!');
       videoUrl = '';
       name = '';
       description = '';
       configs = [defaultConfig()];
-
       dispatch('created', { experimentId: payload.id });
     } catch (e) {
-      error = e instanceof Error ? e.message : 'An unknown error occurred';
-      toast.error(error);
+      error = e instanceof Error ? e.message : 'Unknown error';
+      toast.error(error ?? 'Unknown error');
     } finally {
       loading = false;
     }
@@ -136,30 +92,34 @@
     </span>
   </header>
 
+  <!-- Provider badge — Reap is the only active provider -->
+  <div class="flex items-center gap-2">
+    <span class="text-xs text-[var(--muted)] font-semibold uppercase tracking-[0.2em]">Provider</span>
+    <span class="rounded-full border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1 text-xs font-semibold text-[var(--accent)]">Reap</span>
+  </div>
+
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
     <label class="space-y-2">
       <span class="text-xs font-semibold text-[var(--fg)]">Video URL</span>
       <input
         type="url"
         value={videoUrl}
-        on:input={(event) => (videoUrl = event.currentTarget.value)}
+        on:input={(e) => (videoUrl = e.currentTarget.value)}
         required
-        aria-describedby="video-url-hint"
+        placeholder="https://youtube.com/watch?v=..."
         class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--fg)] placeholder:text-[var(--muted)] transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
       />
-      <span id="video-url-hint" class="text-xs text-[var(--muted)]">Paste a YouTube link</span>
     </label>
     <label class="space-y-2">
       <span class="text-xs font-semibold text-[var(--fg)]">Experiment name</span>
       <input
         type="text"
         value={name}
-        on:input={(event) => (name = event.currentTarget.value)}
+        on:input={(e) => (name = e.currentTarget.value)}
         required
-        aria-describedby="experiment-name-hint"
+        placeholder='e.g. "Portrait vs Square"'
         class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--fg)] placeholder:text-[var(--muted)] transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
       />
-      <span id="experiment-name-hint" class="text-xs text-[var(--muted)]">e.g. "Summer campaign test"</span>
     </label>
   </div>
 
@@ -168,7 +128,7 @@
     <textarea
       rows="2"
       value={description}
-      on:input={(event) => (description = event.currentTarget.value)}
+      on:input={(e) => (description = e.currentTarget.value)}
       placeholder="What are you testing?"
       class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--fg)] placeholder:text-[var(--muted)] transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
     ></textarea>
@@ -180,7 +140,7 @@
         <div class="flex items-start justify-between gap-4">
           <div>
             <p class="text-sm font-semibold text-[var(--fg)]">Variant {index + 1}</p>
-            <p class="text-xs text-[var(--muted)]">Customize duration, clips, and editing options.</p>
+            <p class="text-xs text-[var(--muted)]">Clip duration, orientation, and caption options.</p>
           </div>
           <button
             type="button"
@@ -193,56 +153,40 @@
           </button>
         </div>
 
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label class="space-y-2 text-xs font-semibold text-[var(--fg)]">
-            <span>Duration (sec)</span>
-            <input
-              type="number"
-              min="10"
-              max="180"
-              class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--fg)] transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
-              value={config.maxDuration ?? ''}
-              on:input={(event) =>
-                setConfigValue(index, 'maxDuration',
-                  event.currentTarget.value === '' ? undefined : Number(event.currentTarget.value))
-              }
-            />
-          </label>
-          <label class="space-y-2 text-xs font-semibold text-[var(--fg)]">
-            <span>Max clips</span>
-            <input
-              type="number"
-              min="1"
-              max="10"
-              class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--fg)] transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
-              value={config.maxClipCount ?? ''}
-              on:input={(event) =>
-                setConfigValue(index, 'maxClipCount',
-                  event.currentTarget.value === '' ? undefined : Number(event.currentTarget.value))
-              }
-            />
-          </label>
-          <label class="space-y-2 text-xs font-semibold text-[var(--fg)]">
-            <span>Aspect ratio</span>
+            <span>Clip duration</span>
             <select
               class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--fg)] transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
-              value={config.aspectRatio}
-              on:change={(event) => setConfigValue(index, 'aspectRatio', event.currentTarget.value)}
+              value={config.clipDuration}
+              on:change={(e) => setConfigValue(index, 'clipDuration', Number(e.currentTarget.value) as 30 | 60 | 90)}
             >
-              <option value="9:16">9:16 (Vertical)</option>
-              <option value="16:9">16:9 (Horizontal)</option>
-              <option value="1:1">1:1 (Square)</option>
+              <option value={30}>30s (short)</option>
+              <option value={60}>60s (medium)</option>
+              <option value={90}>90s (long)</option>
+            </select>
+          </label>
+          <label class="space-y-2 text-xs font-semibold text-[var(--fg)]">
+            <span>Orientation</span>
+            <select
+              class="block w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--fg)] transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
+              value={config.orientation}
+              on:change={(e) => setConfigValue(index, 'orientation', e.currentTarget.value as 'portrait' | 'landscape' | 'square')}
+            >
+              <option value="portrait">Portrait 9:16</option>
+              <option value="landscape">Landscape 16:9</option>
+              <option value="square">Square 1:1</option>
             </select>
           </label>
         </div>
 
-        <fieldset class="grid gap-2 text-xs text-[var(--fg)] sm:grid-cols-3">
+        <fieldset class="grid gap-2 text-xs text-[var(--fg)] sm:grid-cols-2">
           <legend class="sr-only">Editing options for variant {index + 1}</legend>
           <label class="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 transition-colors duration-150 hover:border-[var(--accent)]/50 cursor-pointer">
             <input
               type="checkbox"
               checked={config.captions}
-              on:change={(event) => setConfigValue(index, 'captions', event.currentTarget.checked)}
+              on:change={(e) => setConfigValue(index, 'captions', e.currentTarget.checked)}
               class="h-4 w-4 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--accent)] focus:ring-[var(--accent)] focus:ring-offset-0 focus:ring-2 focus:ring-[var(--accent)]/30"
             />
             <span class="text-sm">Captions</span>
@@ -251,19 +195,10 @@
             <input
               type="checkbox"
               checked={config.emojis}
-              on:change={(event) => setConfigValue(index, 'emojis', event.currentTarget.checked)}
+              on:change={(e) => setConfigValue(index, 'emojis', e.currentTarget.checked)}
               class="h-4 w-4 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--accent)] focus:ring-[var(--accent)] focus:ring-offset-0 focus:ring-2 focus:ring-[var(--accent)]/30"
             />
-            <span class="text-sm">Emojis</span>
-          </label>
-          <label class="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 transition-colors duration-150 hover:border-[var(--accent)]/50 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={config.removeSilences}
-              on:change={(event) => setConfigValue(index, 'removeSilences', event.currentTarget.checked)}
-              class="h-4 w-4 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--accent)] focus:ring-[var(--accent)] focus:ring-offset-0 focus:ring-2 focus:ring-[var(--accent)]/30"
-            />
-            <span class="text-sm">Silences</span>
+            <span class="text-sm">Emojis in captions</span>
           </label>
         </fieldset>
       </article>
