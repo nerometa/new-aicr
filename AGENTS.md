@@ -1,174 +1,179 @@
-# AGENTS.md - AICR Project Context
+# AGENTS.md — AICR Project Context
 
-## Project: AICR (AI Content Repurposer)
-SvelteKit frontend + Elysia.js backend for converting YouTube videos to shorts via Klap API.
+## Project
+YouTube → short clips via AI providers (Reap, Reka Vision). SvelteKit frontend + Elysia.js backend.
+
+## Structure
+```
+apps/api/          # Elysia.js backend (port 3000)
+apps/web/          # SvelteKit frontend (port 3001 → container 3000)
+packages/shared/   # Shared TypeScript types (Job, Clip, ClipResponse, SSEResponse)
+```
 
 ## Tech Stack
 - **Runtime:** Bun
-- **Backend:** Elysia.js with Better Auth
+- **Backend:** Elysia.js + Better Auth + Drizzle ORM
 - **Frontend:** SvelteKit + Tailwind CSS v4
-- **Database:** Turso (libsql) with Drizzle ORM
+- **DB:** Turso (libsql)
 - **Queue:** Upstash Redis
-- **Testing:** Bun native test runner (both backend and frontend)
+- **Testing:** Bun native test runner
 
-## Ports
-- Backend API: 3000
-- Frontend Web: 3001 (mapped from container port 3000)
-
-## Important Commands
+## Commands
 ```bash
-bun install          # Install all dependencies
-bun run dev          # Start dev servers
-bun test             # Run tests (from root or apps/*)
-docker compose -f docker-compose.prod.yml up -d  # Production deploy
+bun install                                    # monorepo deps
+bun run dev                                    # both servers
+bun test --testPathPattern apps/api            # API tests only
+bun test --testPathPattern apps/web            # web tests only
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 ## Environment Variables
 
-| Variable | Used By | Description |
-|----------|---------|-------------|
-| `CORS_ORIGIN` | Backend | Frontend URL (for CORS) |
-| `VITE_API_URL` | Frontend | Backend URL (build-time) |
-| `BETTER_AUTH_URL` | Backend | Public URL of API (for auth) |
+### API (`apps/api/.env`)
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | Turso libsql URL |
+| `DATABASE_AUTH_TOKEN` | Turso auth token |
+| `UPSTASH_REDIS_REST_URL` | Redis REST URL |
+| `UPSTASH_REDIS_REST_TOKEN` | Redis REST token |
+| `REAP_API_KEY` | Reap AI clipping key |
+| `REKA_API_KEY` | Reka Vision key |
+| `BETTER_AUTH_SECRET` | ≥32 char secret |
+| `BETTER_AUTH_URL` | Public URL of this API |
+| `CORS_ORIGIN` | Frontend URL |
+| `OWNER_USER_ID` | User ID with access to `/experiments` |
+| `PORT` | Default: 3000 |
 
-Quick reference: `CORS_ORIGIN` = frontend URL, `VITE_API_URL` = backend URL
+### Web (`apps/web/.env`)
+| Variable | Description |
+|---|---|
+| `VITE_API_URL` | Backend URL (baked in at build time) |
 
----
-
-## Known Issues & Fixes
-
-### Docker Healthcheck Fails - curl Not Found
-
-**Symptom:**
+## API Routes
 ```
-Container api is unhealthy
-dependency failed to start: container api is unhealthy
+GET  /api/health
+ALL  /api/auth/*         Better Auth handler
+POST /api/jobs           Create job (rate-limit: 10/hour/IP)
+GET  /api/jobs           List jobs (current user)
+GET  /api/jobs/:id       Job detail
+GET  /api/jobs/sse/:id   SSE job status stream
+GET  /api/clips/:jobId   Clips for a job (with live URLs)
+POST /api/webhooks/reap  Reap completion webhook
+GET  /api/experiments    List experiments (owner only)
+POST /api/experiments    Create experiment (owner only)
+GET  /api/experiments/:id
+DELETE /api/experiments/:id
 ```
+Swagger UI: `GET /docs` (dev only).
 
-**Root Cause:**
-The `oven/bun:1` Docker image doesn't include `curl`. The healthcheck command `curl -f http://localhost:3000/api/health` fails silently.
-
-**Fix:**
-Add curl installation to the Dockerfile base stage:
-```dockerfile
-FROM oven/bun:1 AS base
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+## Key Files
 ```
+apps/api/src/
+  index.ts                    Entry point, mounts all routes + starts poller
+  env.ts                      Zod-validated env (fails fast at boot)
+  db/schema.ts                Drizzle schema: user, session, account, verification, jobs, clips, experiments
+  lib/auth.ts                 Better Auth instance
+  lib/redis.ts                Upstash Redis client
+  services/providers/
+    types.ts                  ClipProvider interface + ProviderClip + ClipConfig
+    reap.ts                   Reap adapter
+    reka.ts                   Reka Vision adapter
+    index.ts                  Provider registry (getProvider, PROVIDER_NAMES)
+  services/poller.ts          Redis-backed 30s poll loop + enqueueJob
+  services/completion.ts      completeJob / failJob — persists clips, updates status
+  services/clip-resolver.ts   Resolves live clip URLs on demand
+  routes/jobs.ts              Job CRUD + SSE
+  routes/clips.ts             Clip fetch (triggers live URL resolution)
+  routes/webhooks.ts          Reap webhook handler
+  routes/experiments.ts       Experiments CRUD (owner only)
+  middleware/requireOwner.ts  Guards experiment routes
 
-### Monorepo Docker Build - bun.lock Not Found
+apps/web/src/lib/
+  api.ts                      API client (API_BASE constant, not function)
+  auth-client.ts              Better Auth browser client
 
-**Symptom:**
+packages/shared/src/index.ts  Job, Clip, ClipResponse, JobResponse, SSEResponse types
 ```
-error: Can't find bun.lock
-```
-
-**Root Cause:**
-`bun.lock` is at monorepo root, but Dockerfiles were building from `apps/api/` context.
-
-**Fix:**
-Build from root context (`.`) and copy ALL workspace package.json files:
-```dockerfile
-COPY package.json bun.lock ./
-COPY apps/api/package.json ./apps/api/
-COPY apps/web/package.json ./apps/web/
-COPY packages/shared/package.json ./packages/shared/
-COPY packages/shared ./packages/shared
-```
-
-```yaml
-# docker-compose.prod.yml
-services:
-  api:
-    build:
-      context: .  # Root, not apps/api
-      dockerfile: apps/api/Dockerfile
-```
-
----
 
 ## Architecture Decisions
 
-### API Client Pattern
-Frontend uses a single `API_BASE` constant (not a function) since `VITE_API_URL` is baked in at build time:
+### Provider interface
+All adapters implement `ClipProvider` from `services/providers/types.ts`. Domain code never imports adapter-specific types directly.
+```typescript
+interface ClipProvider {
+  createProject(sourceUrl: string, config?: ClipConfig): Promise<string>;  // → providerProjectId
+  getProjectStatus(providerProjectId: string): Promise<'processing' | 'completed' | 'failed'>;
+  getClips(providerProjectId: string): Promise<ProviderClip[]>;            // called once at completion
+  getClipUrls(providerProjectId: string): Promise<Map<string, string>>;    // called on-demand
+}
+```
+
+### ClipConfig
+Only fields every provider can honour. Never add silently-ignored fields.
+```typescript
+interface ClipConfig {
+  clipDuration?: 30 | 60 | 90;
+  orientation?: 'portrait' | 'landscape' | 'square';
+  captions?: boolean;
+}
+```
+`emojis` is Reap-internal only — lives in Reap's `DEFAULT_CLIP_CONFIG`, not here.
+
+### URL storage
+- **Reap:** clip URLs ephemeral — never stored. Fetched live per `getClipUrls` call.
+- **Reka:** clip URLs stable — stored in `clips.clip_url` at completion. `getClipUrls` re-fetches `GET /v1/clips/{id}` on demand.
+
+### Virality scores
+Normalized to 0–100 by each adapter before persistence. Reap raw (0–10) × 10. Reka `ai_score` (0–100) as-is.
+
+### API client (frontend)
+`API_BASE` is a constant — `VITE_API_URL` baked in at build time.
 ```typescript
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 ```
 
-### Klap Service
-Unified request function with generic typing:
-```typescript
-async function klapRequest<T>(path: string, options?: RequestInit): Promise<T>
-```
-
-### SSE Cleanup
-Uses standard `AbortSignal` instead of manual cancel handlers:
+### SSE cleanup
+Uses `AbortSignal` — no manual cancel handlers.
 ```typescript
 signal?.addEventListener('abort', () => { clearInterval(intervalId); });
 ```
 
----
+### Auth
+Sessions resolved via Better Auth in routes that need them. `resolveUserId` returns null for anonymous. Anonymous jobs work — `userId` nullable.
 
-## Test Count
-- Backend: 43 tests (was 31, added 12 new tests for Klap managed user flow)
-- Frontend: 6 tests
-- Total: 49 tests
+### Experiments
+Owner-only (guarded by `requireOwner` middleware, checks `OWNER_USER_ID` env against session user). `provider` field immutable after creation.
 
----
+## Invariants
+- `jobs.provider` and `experiments.provider` immutable after creation.
+- All `clips.virality_score` values are 0–100.
+- Reap clip URLs never in DB. Reka clip URLs always in `clips.clip_url`.
+- `ClipConfig` only holds fields all current providers honour.
+- Both `REAP_API_KEY` and `REKA_API_KEY` required at boot — no optional provider.
+- Reap projects expire after 60–120 days; `getClipUrls` must surface this, not silently return empty.
 
-## Klap Managed Users Feature
+See `CONTEXT.md` for full domain glossary and `docs/adr/` for architecture decisions.
 
-### Overview
-Authenticated users can view generated clips without needing a Klap account. This is implemented via Klap's Managed Users & Embeds feature.
-
-### Flow
-1. **Job Creation**: When an authenticated user creates a job
-   - Checks if user has `klapManagedUserId`
-   - If not, creates managed user via `POST /users`
-   - Stores `klapManagedUserId` in user record
-   - Passes `X-On-Behalf-Of` header to Klap when creating tasks
-
-2. **Task Processing**: Poller monitors Klap task status
-
-3. **Completion**: When task completes
-   - Generates access token via `POST /users/{userId}/tokens`
-   - Constructs embed URL: `https://app.klap.app/embed/{projectId}#external_access_token={token}`
-   - Stores embed URL in clips table
-
-4. **API Response**: Job and clip endpoints return `embedUrl` field
-   - For authenticated jobs: embed URL with token
-   - For anonymous jobs: null (fallback to previewUrl)
-
-### Database Schema Updates
-```typescript
-// User table
-klapManagedUserId: text('klap_managed_user_id') // nullable
-
-// Clips table
-embedUrl: text('embed_url') // nullable
+## Test Files
+```
+apps/api/src/routes/jobs.test.ts
+apps/api/src/routes/experiments.test.ts
+apps/api/src/services/poller.test.ts
+apps/api/src/services/reap.test.ts
+apps/api/e2e/experiments.test.ts
+apps/web/src/lib/api.test.ts
+apps/web/src/lib/components/ExperimentSetup.test.ts
+apps/web/src/lib/components/ExperimentResults.test.ts
+apps/web/src/lib/components/ExperimentComparison.test.ts
 ```
 
-### Key Implementation Files
-- `apps/api/src/services/klap.ts` - Managed user and token functions
-- `apps/api/src/routes/jobs.ts` - Auth-aware job creation
-- `apps/api/src/services/poller.ts` - Token generation on completion
-- `apps/api/src/routes/clips.ts` - Embed URL in responses
-
-### Security Notes
-- Tokens are generated on-demand and never stored in database
-- One managed user per AICR user (lazy creation on first job)
-- Anonymous jobs continue to work without embed URLs
-- Graceful degradation if managed user creation fails
-
-## Agent skills
+## Agent Skills
 
 ### Issue tracker
-
-Issues live as markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+Issues as markdown under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
-
-Five canonical labels: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+`needs-triage` → `needs-info` → `ready-for-agent` | `ready-for-human` | `wontfix`. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
-
-Single-context layout: `CONTEXT.md` at root + `docs/adr/`. See `docs/agents/domain.md`.
+`CONTEXT.md` at root + `docs/adr/`. See `docs/agents/domain.md`.
