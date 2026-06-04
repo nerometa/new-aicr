@@ -40,9 +40,15 @@ const envSchema = z.object({
   REKA_API_KEY: z.string().min(1, 'REKA_API_KEY is required'),
 
   // ============================================
+  // Google OAuth (social login via Better Auth)
+  // ============================================
+  GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
+  GOOGLE_CLIENT_SECRET: z.string().min(1, 'GOOGLE_CLIENT_SECRET is required'),
+
+  // ============================================
   // Reap webhook signature secret (HMAC-SHA256 of raw body, or shared bearer/token)
   // Required in production. Falls back to dev-only placeholder otherwise.
-  // ============================================
+  // =================================
   REAP_WEBHOOK_SECRET: z.string().min(16, 'REAP_WEBHOOK_SECRET must be at least 16 characters'),
 
   // ============================================
@@ -79,6 +85,19 @@ function loadEnv(): Env {
     if (process.env.NODE_ENV !== 'production') {
       // @ts-ignore
       (process.env as any).REAP_WEBHOOK_SECRET = 'test-webhook-secret-placeholder-32chars';
+    }
+  }
+  // Test placeholders for Google OAuth — production MUST set real credentials
+  if ((process.env as any).GOOGLE_CLIENT_ID == null || String((process.env as any).GOOGLE_CLIENT_ID).trim() === '') {
+    if (process.env.NODE_ENV !== 'production') {
+      // @ts-ignore
+      (process.env as any).GOOGLE_CLIENT_ID = 'test-google-client-id';
+    }
+  }
+  if ((process.env as any).GOOGLE_CLIENT_SECRET == null || String((process.env as any).GOOGLE_CLIENT_SECRET).trim() === '') {
+    if (process.env.NODE_ENV !== 'production') {
+      // @ts-ignore
+      (process.env as any).GOOGLE_CLIENT_SECRET = 'test-google-client-secret';
     }
   }
   const result = envSchema.safeParse(process.env);
