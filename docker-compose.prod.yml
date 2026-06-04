@@ -33,6 +33,7 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN}
       - PORT=${API_PORT:-3000}
       - OWNER_USER_ID=${OWNER_USER_ID}
+      - REAP_WEBHOOK_SECRET=${REAP_WEBHOOK_SECRET}
       # DNS resolution for external APIs
       - DNS=1.1.1.1
     restart: unless-stopped
