@@ -38,6 +38,18 @@ const envSchema = z.object({
   // Reka Vision API (AI video clipping provider)
   // ============================================
   REKA_API_KEY: z.string().min(1, 'REKA_API_KEY is required'),
+
+  // ============================================
+  // Reap webhook signature secret (HMAC-SHA256 of raw body, or shared bearer/token)
+  // Required in production. Falls back to dev-only placeholder otherwise.
+  // ============================================
+  REAP_WEBHOOK_SECRET: z.string().min(16, 'REAP_WEBHOOK_SECRET must be at least 16 characters'),
+
+  // ============================================
+  // Proxy trust — set "true" ONLY when API is deployed behind a trusted reverse proxy
+  // (Nginx/Cloudflare/Railway) that sets X-Forwarded-For. Default false: header ignored.
+  // ============================================
+  TRUST_PROXY: z.union([z.literal('true'), z.literal('false')]).default('false').transform(v => v === 'true'),
 });
 // Startup-time validation for mandatory env var (production)
 const rawOwnerUserId = process.env.OWNER_USER_ID;
@@ -60,6 +72,13 @@ function loadEnv(): Env {
       // Assign a harmless placeholder for tests
       // @ts-ignore
       (process.env as any).OWNER_USER_ID = 'test-owner';
+    }
+  }
+  // Test placeholder for webhook secret — production MUST set REAP_WEBHOOK_SECRET explicitly
+  if ((process.env as any).REAP_WEBHOOK_SECRET == null || String((process.env as any).REAP_WEBHOOK_SECRET).trim() === '') {
+    if (process.env.NODE_ENV !== 'production') {
+      // @ts-ignore
+      (process.env as any).REAP_WEBHOOK_SECRET = 'test-webhook-secret-placeholder-32chars';
     }
   }
   const result = envSchema.safeParse(process.env);
