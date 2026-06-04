@@ -304,9 +304,16 @@ export const experimentsRoute = new Elysia({ prefix: '/api/experiments' })
       ? await db.select().from(clips).where(inArray(clips.jobId, jobIds))
       : [];
 
+    // CSV escape with formula-injection neutralization.
+    // Excel/Sheets treat cells starting with =,+,-,@,\t,\r as formulas → potential DDE / data exfil.
+    // Prefix with single-quote (Excel treats as text) before standard CSV quoting.
+    const FORMULA_PREFIXES = /^[=+\-@\t\r]/;
     const csvEscape = (val: unknown): string => {
-      const str = val === null || val === undefined ? '' : String(val);
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      let str = val === null || val === undefined ? '' : String(val);
+      if (FORMULA_PREFIXES.test(str)) {
+        str = `'${str}`;
+      }
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
         return `"${str.replace(/"/g, '""')}"`;
       }
       return str;

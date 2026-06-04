@@ -8,16 +8,49 @@ import { enqueueJob } from '../services/poller';
 import { randomUUID } from 'crypto';
 import { redis } from '../lib/redis';
 import { sanitizeYouTubeUrl } from '../lib/youtube';
+import { env } from '../env';
 
 // Constants
 const RATE_LIMIT_JOBS_PER_HOUR = 10;
 const RATE_LIMIT_WINDOW_SEC = 3600;
+// Global anon bucket when no trusted proxy is configured — prevents unbounded XFF spoofing.
+const RATE_LIMIT_ANON_GLOBAL_PER_HOUR = 60;
 
-async function isRateLimited(ip: string): Promise<boolean> {
-  const key = `rate_limit:${ip}`;
+async function isRateLimited(bucket: string, limit: number): Promise<boolean> {
+  const key = `rate_limit:${bucket}`;
   const count = await redis.incr(key);
   if (count === 1) await redis.expire(key, RATE_LIMIT_WINDOW_SEC);
-  return count > RATE_LIMIT_JOBS_PER_HOUR;
+  return count > limit;
+}
+
+/**
+ * Pick a rate-limit bucket key.
+ *   - Authenticated request → per-user (most reliable, immune to header spoofing)
+ *   - TRUST_PROXY=true → leftmost public IP from X-Forwarded-For
+ *   - otherwise → single global anon bucket with tighter total cap
+ * Returns [bucket, limit].
+ */
+function pickRateLimitBucket(headers: Headers, userId: string | null): [string, number] {
+  if (userId) return [`user:${userId}`, RATE_LIMIT_JOBS_PER_HOUR];
+
+  if (env.TRUST_PROXY) {
+    const xff = headers.get('x-forwarded-for');
+    if (xff) {
+      // Leftmost entry is original client per RFC 7239. Validate format minimally.
+      const first = xff.split(',')[0]?.trim();
+      if (first && /^[\w.:%-]+$/.test(first) && first.length <= 64) {
+        return [`ip:${first}`, RATE_LIMIT_JOBS_PER_HOUR];
+      }
+    }
+    const real = headers.get('x-real-ip')?.trim();
+    if (real && /^[\w.:%-]+$/.test(real) && real.length <= 64) {
+      return [`ip:${real}`, RATE_LIMIT_JOBS_PER_HOUR];
+    }
+  }
+
+  // Untrusted environment: collapse anonymous traffic into one bucket.
+  // Trade-off: legitimate anon users share quota, but spoofing the bucket is impossible.
+  return ['anon:global', RATE_LIMIT_ANON_GLOBAL_PER_HOUR];
 }
 
 async function resolveUserId(headers: Headers): Promise<string | null> {
@@ -35,16 +68,15 @@ async function resolveUserId(headers: Headers): Promise<string | null> {
 
 export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
   .post('/', async ({ body, set, request }) => {
-    const ip =
-      request.headers.get('x-forwarded-for') ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
+    // Resolve user first → enables per-user bucket (immune to header spoofing).
+    const dbUserId = await resolveUserId(request.headers);
 
-    if (await isRateLimited(ip)) {
+    const [bucket, limit] = pickRateLimitBucket(request.headers, dbUserId);
+    if (await isRateLimited(bucket, limit)) {
       set.status = 429;
       return {
         error: 'Rate limit exceeded',
-        message: `Maximum ${RATE_LIMIT_JOBS_PER_HOUR} jobs per hour allowed.`,
+        message: `Maximum ${limit} jobs per hour allowed.`,
       };
     }
 
@@ -65,7 +97,6 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       };
     }
 
-    const dbUserId = await resolveUserId(request.headers);
     const jobId = randomUUID();
 
     try {
@@ -87,11 +118,14 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       console.log(`[Jobs] Created job ${jobId} via ${providerName} for ${sanitizedUrl}`);
       return { id: jobId, status: 'pending', youtubeUrl: sanitizedUrl, provider: providerName };
     } catch (error) {
-      console.error('Job creation error:', error);
+      // Generate correlation id; log full error server-side; return opaque message.
+      const correlationId = randomUUID();
+      console.error(`[Jobs] Job creation error [${correlationId}]:`, error);
       set.status = 500;
       return {
         error: 'Failed to create job',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: 'Upstream provider error. Try again later.',
+        correlationId,
       };
     }
   }, {
@@ -101,11 +135,20 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
     }),
   })
 
-  .get('/:id', async ({ params, set }) => {
+  .get('/:id', async ({ params, request, set }) => {
+    const dbUserId = await resolveUserId(request.headers);
+    if (!dbUserId) {
+      set.status = 401;
+      return { error: 'Unauthorized', message: 'Authentication required' };
+    }
     const [job] = await db.select().from(jobs).where(eq(jobs.id, params.id));
     if (!job) {
       set.status = 404;
       return { error: 'Job not found' };
+    }
+    if (job.userId !== dbUserId) {
+      set.status = 403;
+      return { error: 'Forbidden', message: 'You do not have access to this job' };
     }
     return {
       id: job.id,
@@ -126,7 +169,23 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
     return userJobs.map(j => ({ id: j.id, status: j.status, youtubeUrl: j.youtubeUrl, provider: j.provider }));
   })
 
-  .get('/sse/:jobId', ({ params, set, signal }) => {
+  .get('/sse/:jobId', async ({ params, request, set, signal }) => {
+    // Auth + ownership check BEFORE opening stream
+    const dbUserId = await resolveUserId(request.headers);
+    if (!dbUserId) {
+      set.status = 401;
+      return { error: 'Unauthorized', message: 'Authentication required' };
+    }
+    const [ownedJob] = await db.select().from(jobs).where(eq(jobs.id, params.jobId));
+    if (!ownedJob) {
+      set.status = 404;
+      return { error: 'Job not found' };
+    }
+    if (ownedJob.userId !== dbUserId) {
+      set.status = 403;
+      return { error: 'Forbidden', message: 'You do not have access to this job' };
+    }
+
     set.headers['Content-Type'] = 'text/event-stream';
     set.headers['Cache-Control'] = 'no-cache';
     set.headers['Connection'] = 'keep-alive';
