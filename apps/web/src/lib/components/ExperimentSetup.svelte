@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { API_BASE } from '$lib/api';
+  import { API_BASE, getProviders } from '$lib/api';
   import { toast } from '$lib/toast';
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
 
   // emojis removed — Reap-only internal config, not in shared ClipConfig
   type ConfigForm = {
@@ -21,7 +21,8 @@
   let videoUrl = '';
   let name = '';
   let description = '';
-  let provider: 'reap' | 'reka' = 'reap';
+  let provider = 'reap';
+  let providers: string[] = ['reap', 'reka'];
   let configs: ConfigForm[] = [defaultConfig()];
   let loading = false;
   let error: string | null = null;
@@ -35,6 +36,20 @@
     if (configs.length === 1) return;
     configs = configs.filter((_, i) => i !== index);
   };
+
+  onMount(async () => {
+    try {
+      const res = await getProviders();
+      if (res.providers?.length) {
+        providers = res.providers;
+        if (!providers.includes(provider)) {
+          provider = providers[0]!;
+        }
+      }
+    } catch {
+      // keep fallback defaults
+    }
+  });
 
   async function handleSubmit() {
     if (!videoUrl.trim() || !name.trim()) {
@@ -97,7 +112,7 @@
   <div class="flex items-center gap-3">
     <span class="text-xs font-semibold text-[var(--fg)] uppercase tracking-[0.2em]">Provider</span>
     <div class="flex gap-1">
-      {#each (['reap', 'reka'] as const) as p}
+      {#each providers as p}
         <button
           type="button"
           on:click={() => (provider = p)}

@@ -5,6 +5,7 @@ import { auth } from './lib/auth';
 import { jobsRoute } from './routes/jobs';
 import { clipsRoute } from './routes/clips';
 import { webhooksRoute } from './routes/webhooks';
+import { providersRoute } from './routes/providers';
 import { experimentsRoute } from './routes/experiments';
 import { startPoller } from './services/poller';
 import { env } from './env';
@@ -24,6 +25,7 @@ const app = new Elysia()
   .use(jobsRoute)
   .use(clipsRoute)
   .use(webhooksRoute)
+  .use(providersRoute)
   .use(experimentsRoute)
   .listen({ port: env.PORT, hostname: '0.0.0.0' });
 

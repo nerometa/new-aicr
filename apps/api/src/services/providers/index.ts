@@ -3,6 +3,7 @@
 // Domain code uses getProvider(job.provider) — never the old singleton.
 
 import type { ClipProvider } from './types';
+import { env } from '../../env';
 import { reapProvider } from './reap';
 import { rekaProvider } from './reka';
 
@@ -10,6 +11,16 @@ const PROVIDERS: Record<string, ClipProvider> = {
   reap: reapProvider,
   reka: rekaProvider,
 };
+
+// Optional providers — only registered when their API key is present at boot.
+if (env.VIZARD_API_KEY) {
+  const { vizardProvider } = await import('./vizard');
+  PROVIDERS['vizard'] = vizardProvider;
+}
+if (env.SSEMBLE_API_KEY) {
+  const { ssembleProvider } = await import('./ssemble');
+  PROVIDERS['ssemble'] = ssembleProvider;
+}
 
 export const PROVIDER_NAMES = Object.keys(PROVIDERS) as Array<keyof typeof PROVIDERS>;
 

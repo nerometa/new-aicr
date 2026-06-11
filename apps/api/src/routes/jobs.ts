@@ -136,7 +136,7 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
   }, {
     body: t.Object({
       youtubeUrl: t.String(),
-      provider: t.Optional(t.Union([t.Literal('reap'), t.Literal('reka')])),
+      provider: t.Optional(t.String()),
     }),
   })
 

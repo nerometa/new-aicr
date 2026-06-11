@@ -17,7 +17,7 @@ export const CreateExperimentRequest = t.Object({
   sourceVideoUrl: t.String({ format: 'uri' }),
   name: t.String(),
   description: t.Optional(t.String()),
-  provider: t.Union([t.Literal('reap'), t.Literal('reka')]),
+  provider: t.String(),
   configurations: t.Array(Configuration),
 });
 

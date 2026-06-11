@@ -1,11 +1,28 @@
 <script lang="ts">
-  import { createJob, ApiError } from '$lib/api';
+  import { createJob, getProviders, ApiError } from '$lib/api';
   import { toast } from '$lib/toast';
   import { viewStore } from '$lib/stores/view';
+  import { onMount } from 'svelte';
 
   let url = $state('');
-  let provider = $state<'reap' | 'reka'>('reap');
+  let provider = $state('reap');
   let loading = $state(false);
+  let providers = $state<string[]>(['reap', 'reka']); // fallback defaults
+
+  onMount(async () => {
+    try {
+      const res = await getProviders();
+      if (res.providers?.length) {
+        providers = res.providers;
+        // Reset to first available if current not registered
+        if (!providers.includes(provider)) {
+          provider = providers[0]!;
+        }
+      }
+    } catch {
+      // Keep fallback defaults on network failure
+    }
+  });
 
   async function submit() {
     if (!url) return;
@@ -46,7 +63,7 @@
   <div class="flex items-center gap-2 px-1">
     <span class="text-xs text-[var(--muted)] font-semibold uppercase tracking-[0.2em]">Provider</span>
     <div class="flex gap-1">
-      {#each (['reap', 'reka'] as const) as p}
+      {#each providers as p}
         <button
           type="button"
           onclick={() => (provider = p)}

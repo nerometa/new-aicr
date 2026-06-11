@@ -41,8 +41,12 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+// Providers — dynamic, fetched from backend
+export const getProviders = () =>
+  apiFetch<{ providers: string[] }>('/api/providers');
+
 // Jobs
-export const createJob = (youtubeUrl: string, provider: 'reap' | 'reka' = 'reap') =>
+export const createJob = (youtubeUrl: string, provider: string = 'reap') =>
   apiFetch<JobResponse>('/api/jobs', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

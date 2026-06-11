@@ -40,6 +40,16 @@ const envSchema = z.object({
   REKA_API_KEY: z.string().min(1, 'REKA_API_KEY is required'),
 
   // ============================================
+  // Vizard AI API (optional — only registered when key is present)
+  // ============================================
+  VIZARD_API_KEY: z.string().optional(),
+
+  // ============================================
+  // Ssemble AI Clipping API (optional — only registered when key is present)
+  // ============================================
+  SSEMBLE_API_KEY: z.string().optional(),
+
+  // ============================================
   // Google OAuth (social login via Better Auth)
   // ============================================
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
@@ -98,6 +108,19 @@ function loadEnv(): Env {
     if (process.env.NODE_ENV !== 'production') {
       // @ts-ignore
       (process.env as any).GOOGLE_CLIENT_SECRET = 'test-google-client-secret';
+    }
+  }
+  // Test placeholders for Vizard + Ssemble — optional providers, safe to skip in tests
+  if ((process.env as any).VIZARD_API_KEY == null) {
+    if (process.env.NODE_ENV !== 'production') {
+      // @ts-ignore
+      (process.env as any).VIZARD_API_KEY = 'test-vizard-key';
+    }
+  }
+  if ((process.env as any).SSEMBLE_API_KEY == null) {
+    if (process.env.NODE_ENV !== 'production') {
+      // @ts-ignore
+      (process.env as any).SSEMBLE_API_KEY = 'test-ssemble-key';
     }
   }
   const result = envSchema.safeParse(process.env);
