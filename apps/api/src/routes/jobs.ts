@@ -71,6 +71,11 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
     // Resolve user first → enables per-user bucket (immune to header spoofing).
     const dbUserId = await resolveUserId(request.headers);
 
+    if (!dbUserId) {
+      set.status = 401;
+      return { error: 'Unauthorized', message: 'Authentication required to create jobs' };
+    }
+
     const [bucket, limit] = pickRateLimitBucket(request.headers, dbUserId);
     if (await isRateLimited(bucket, limit)) {
       set.status = 429;

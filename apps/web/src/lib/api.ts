@@ -10,6 +10,15 @@ import type { Job, ClipResponse, JobResponse, CreateJobRequest } from '@aicr/sha
 // API base URL - VITE_API_URL must be set at build time
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+    this.name = 'ApiError';
+  }
+}
+
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -21,7 +30,12 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   });
   
   if (!res.ok) {
-    throw new Error(`API Error: ${res.status} ${res.statusText}`);
+    let message = `API Error: ${res.status} ${res.statusText}`;
+    try {
+      const body = await res.json();
+      if (body?.message) message = body.message;
+    } catch {}
+    throw new ApiError(res.status, message);
   }
   
   return res.json();

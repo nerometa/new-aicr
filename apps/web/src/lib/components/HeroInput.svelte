@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createJob } from '$lib/api';
+  import { createJob, ApiError } from '$lib/api';
   import { toast } from '$lib/toast';
   import { viewStore } from '$lib/stores/view';
 
@@ -14,8 +14,12 @@
       const job = await createJob(url, provider);
       viewStore.toJob(job.id);
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to start. Check your URL.';
-      toast.error(message);
+      if (e instanceof ApiError && e.status === 401) {
+        viewStore.openAuthModal();
+      } else {
+        const message = e instanceof Error ? e.message : 'Failed to start. Check your URL.';
+        toast.error(message);
+      }
     } finally {
       loading = false;
     }
