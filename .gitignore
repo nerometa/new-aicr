@@ -45,3 +45,9 @@ drizzle/meta/
 
 # Sisyphus
 .sisyphus/
+
+# Agent/system dirs
+.agents/
+.pi/
+active/
+docs/
