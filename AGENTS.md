@@ -144,12 +144,56 @@ Sessions resolved via Better Auth in routes that need them. `resolveUserId` retu
 ### Experiments
 Owner-only (guarded by `requireOwner` middleware, checks `OWNER_USER_ID` env against session user). `provider` field immutable after creation.
 
+### Provider Auto-Selection
+
+**Boot-time registration** (`services/providers/index.ts`):
+- `reap` and `reka` always registered — `REAP_API_KEY` and `REKA_API_KEY` are required env vars (Zod `.min(1)`).
+- `vizard` registered only if `VIZARD_API_KEY` present (optional env var).
+- `ssemble` registered only if `SSEMBLE_API_KEY` present (optional env var).
+- Top-level `await import()` for optional providers — dynamic, not bundled unless key exists.
+- `PROVIDER_NAMES` exported as `Object.keys(PROVIDERS)` — reflects only currently-registered providers.
+
+**Default provider** (`routes/jobs.ts` line 94):
+```typescript
+const providerName = body.provider ?? 'reap';
+```
+Jobs default to `reap` when `provider` omitted from request body. Experiments require `provider` explicitly (no default in `CreateExperimentRequest` schema).
+
+**Frontend discovery** (`routes/providers.ts`):
+- `GET /api/providers` returns `PROVIDER_NAMES` — dynamic list of available providers.
+- Frontend (`HeroInput.svelte`, `ExperimentSetup.svelte`) calls `getProviders()` on mount, populates provider picker, auto-selects `providers[0]` if default `reap` not in list.
+
+**DB defaults**:
+- `jobs.provider` column: `text('provider').notNull().default('reap')`.
+- `experiments.provider` column: `text('provider').notNull().default('reap')`.
+- Both immutable after creation — never updated.
+
+**Two-tier key model**:
+| Provider | Env var | Zod rule | Registered when |
+|---|---|---|---|
+| reap | `REAP_API_KEY` | `.min(1)` required | Always |
+| reka | `REKA_API_KEY` | `.min(1)` required | Always |
+| vizard | `VIZARD_API_KEY` | `.optional()` | Key present at boot |
+| ssemble | `SSEMBLE_API_KEY` | `.optional()` | Key present at boot |
+
+**Validation flow** (jobs route):
+1. Client sends `{ youtubeUrl, provider? }`.
+2. `body.provider ?? 'reap'` resolves default.
+3. `PROVIDER_NAMES.includes(providerName)` validates against boot-time registry — fast-fail 400 if unknown.
+4. `getProvider(providerName)` retrieves adapter instance — throws if somehow missing.
+5. `provider.createProject(url)` submits to external API.
+
+**Validation flow** (experiments route):
+1. Client sends `{ sourceVideoUrl, provider, configurations }` — `provider` required.
+2. `getProvider(providerName)` called — try/catch returns 400 if unknown.
+3. All jobs in experiment share same `provider` — cross-provider A/B not supported.
+
 ## Invariants
 - `jobs.provider` and `experiments.provider` immutable after creation.
 - All `clips.virality_score` values are 0–100.
 - Reap clip URLs never in DB. Reka clip URLs always in `clips.clip_url`.
 - `ClipConfig` only holds fields all current providers honour.
-- Both `REAP_API_KEY` and `REKA_API_KEY` required at boot — no optional provider.
+- `REAP_API_KEY` and `REKA_API_KEY` required at boot. `VIZARD_API_KEY` and `SSEMBLE_API_KEY` optional — providers registered only when key present.
 - Reap projects expire after 60–120 days; `getClipUrls` must surface this, not silently return empty.
 
 See `CONTEXT.md` for full domain glossary and `docs/adr/` for architecture decisions.
