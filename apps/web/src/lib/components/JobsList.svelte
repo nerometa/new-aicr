@@ -11,8 +11,15 @@
   // Relative time formatter
   const rtf = typeof Intl !== 'undefined' ? new Intl.RelativeTimeFormat('en', { numeric: 'auto' }) : null;
 
-  function timeAgo(date: Date | string): string {
-    const then = new Date(date).getTime();
+  function getTime(value: Date | string | undefined | null): number | null {
+    const time = value instanceof Date ? value.getTime() : new Date(value ?? '').getTime();
+    return Number.isFinite(time) ? time : null;
+  }
+
+  function timeAgo(date: Date | string | undefined | null): string {
+    const then = getTime(date);
+    if (then === null) return '';
+
     const now = Date.now();
     const seconds = Math.round((then - now) / 1000);
     const absSeconds = Math.abs(seconds);
@@ -61,7 +68,7 @@
   onMount(async () => {
     try {
       jobs = (await getJobs()).sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        (a, b) => (getTime(b.createdAt) ?? 0) - (getTime(a.createdAt) ?? 0)
       );
       
       // Fetch titles for all jobs in parallel
