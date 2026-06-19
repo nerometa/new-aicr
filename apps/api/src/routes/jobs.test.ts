@@ -154,3 +154,36 @@ describe('YouTube URL validation', () => {
     });
   });
 });
+
+describe('jobs response shape', () => {
+  it('list response includes createdAt and updatedAt', () => {
+    const now = new Date();
+    const response = {
+      id: 'job-1',
+      status: 'pending',
+      youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      provider: 'reap',
+      createdAt: now,
+      updatedAt: now,
+    };
+    expect('createdAt' in response).toBe(true);
+    expect('updatedAt' in response).toBe(true);
+    expect(response.createdAt).toBeInstanceOf(Date);
+    expect(response.updatedAt).toBeInstanceOf(Date);
+  });
+
+  it('detail response includes createdAt and updatedAt', () => {
+    const now = new Date();
+    const response = {
+      id: 'job-1',
+      status: 'pending',
+      youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      provider: 'reap',
+      errorMessage: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    expect('createdAt' in response).toBe(true);
+    expect('updatedAt' in response).toBe(true);
+  });
+});

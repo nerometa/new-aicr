@@ -161,6 +161,8 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       youtubeUrl: job.youtubeUrl,
       provider: job.provider,
       errorMessage: job.errorMessage,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
     };
   })
 
@@ -171,7 +173,14 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       return { error: 'Unauthorized', message: 'Authentication required to view jobs' };
     }
     const userJobs = await db.select().from(jobs).where(eq(jobs.userId, dbUserId));
-    return userJobs.map(j => ({ id: j.id, status: j.status, youtubeUrl: j.youtubeUrl, provider: j.provider }));
+    return userJobs.map(j => ({
+      id: j.id,
+      status: j.status,
+      youtubeUrl: j.youtubeUrl,
+      provider: j.provider,
+      createdAt: j.createdAt,
+      updatedAt: j.updatedAt,
+    }));
   })
 
   .get('/sse/:jobId', async ({ params, request, set, signal }) => {
