@@ -8,6 +8,7 @@ const TIMEOUT_MS = 30_000;
 const DEFAULT_CONFIG = {
   lang: 'en' as const,
   videoType: 2 as const, // YouTube
+  maxClipNumber: 3,
 };
 
 // ─── Internal types ───────────────────────────────────────────────────────────
@@ -118,6 +119,7 @@ async function createProject(
     videoUrl: sourceUrl,
     videoType: DEFAULT_CONFIG.videoType,
     ratioOfClip: toRatioOfClip(config?.orientation),
+    maxClipNumber: DEFAULT_CONFIG.maxClipNumber,
   };
 
   const res = await vizardRequest<VizardCreateResponse>('/create', {

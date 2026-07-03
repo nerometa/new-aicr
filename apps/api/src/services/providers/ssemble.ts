@@ -78,6 +78,7 @@ async function createProject(
 ): Promise<string> {
   const body: Record<string, unknown> = {
     url: sourceUrl,
+    preferredLength: 'under30sec',
   };
 
   const res = await ssembleRequest<SsembleCreateResponse>('/shorts/create', {
