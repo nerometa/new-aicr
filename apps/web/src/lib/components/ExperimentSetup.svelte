@@ -21,9 +21,8 @@
   let videoUrl = '';
   let name = '';
   let description = '';
-  const ALL_PROVIDERS = ['reap', 'reka', 'vizard', 'ssemble'] as const;
   let provider = 'reap';
-  let providers: string[] = [...ALL_PROVIDERS];
+  let providers: string[] = ['reap'];
   let configs: ConfigForm[] = [defaultConfig()];
   let loading = false;
   let error: string | null = null;
@@ -42,13 +41,13 @@
     try {
       const res = await getProviders();
       if (res.providers?.length) {
-        providers = [...new Set([...res.providers, ...ALL_PROVIDERS])];
+        providers = res.providers;
         if (!providers.includes(provider)) {
           provider = providers[0]!;
         }
       }
     } catch {
-      // keep all known providers on network failure
+      // keep default reap on network failure
     }
   });
 

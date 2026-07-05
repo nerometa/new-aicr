@@ -7,22 +7,19 @@
   let url = $state('');
   let provider = $state('reap');
   let loading = $state(false);
-  const ALL_PROVIDERS = ['reap', 'reka', 'vizard', 'ssemble'] as const;
-  let providers = $state<string[]>([...ALL_PROVIDERS]);
+  let providers = $state<string[]>(['reap']);
 
   onMount(async () => {
     try {
       const res = await getProviders();
       if (res.providers?.length) {
-        // Union: always show all known providers, add any new ones from API
-        providers = [...new Set([...res.providers, ...ALL_PROVIDERS])];
-        // Reset to first available if current not registered
+        providers = res.providers;
         if (!providers.includes(provider)) {
           provider = providers[0]!;
         }
       }
     } catch {
-      // Keep all known providers on network failure
+      // Keep default reap on network failure
     }
   });
 
