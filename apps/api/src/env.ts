@@ -42,12 +42,12 @@ const envSchema = z.object({
   // ============================================
   // Vizard AI API (optional — only registered when key is present)
   // ============================================
-  VIZARD_API_KEY: z.string().optional(),
+  VIZARD_API_KEY: z.string().min(1).optional(),
 
   // ============================================
   // Ssemble AI Clipping API (optional — only registered when key is present)
   // ============================================
-  SSEMBLE_API_KEY: z.string().optional(),
+  SSEMBLE_API_KEY: z.string().min(1).optional(),
 
   // ============================================
   // Google OAuth (social login via Better Auth)

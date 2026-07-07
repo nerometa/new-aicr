@@ -36,6 +36,8 @@ services:
       - REAP_WEBHOOK_SECRET=${REAP_WEBHOOK_SECRET}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - VIZARD_API_KEY=${VIZARD_API_KEY:-}
+      - SSEMBLE_API_KEY=${SSEMBLE_API_KEY:-}
       # DNS resolution for external APIs
       - DNS=1.1.1.1
     restart: unless-stopped
