@@ -7,7 +7,7 @@ describe('Vizard adapter - createProject', () => {
   it('returns provider project ID from API response', async () => {
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = async () =>
-      new Response(JSON.stringify({ message: 'success', data: { projectId: 42 } }), {
+      new Response(JSON.stringify({ code: 2000, projectId: 42, shareLink: '', errMsg: '' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -29,7 +29,7 @@ describe('Vizard adapter - createProject', () => {
     (globalThis as any).fetch = async (url: string, init?: RequestInit) => {
       capturedUrl = url;
       capturedBody = JSON.parse(init?.body as string ?? '{}');
-      return new Response(JSON.stringify({ message: 'success', data: { projectId: 1 } }), {
+      return new Response(JSON.stringify({ code: 2000, projectId: 1, shareLink: '', errMsg: '' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -53,7 +53,7 @@ describe('Vizard adapter - createProject', () => {
 
     (globalThis as any).fetch = async (_url: string, init?: RequestInit) => {
       capturedBody = JSON.parse(init?.body as string ?? '{}');
-      return new Response(JSON.stringify({ message: 'success', data: { projectId: 3 } }), {
+      return new Response(JSON.stringify({ code: 2000, projectId: 3, shareLink: '', errMsg: '' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -87,7 +87,7 @@ describe('Vizard adapter - getProjectStatus', () => {
       const originalFetch = globalThis.fetch;
       (globalThis as any).fetch = async () =>
         new Response(
-          JSON.stringify({ code, message: '', data: { projectId: 1, projectName: '', shareLink: null, videos: [] } }),
+          JSON.stringify({ code, projectId: 1, projectName: '', shareLink: null, videos: [] }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
 
@@ -121,8 +121,10 @@ describe('Vizard adapter - getClips', () => {
       new Response(
         JSON.stringify({
           code: 2000,
-          message: '',
-          data: { projectId: 1, projectName: 'Test', shareLink: null, videos: [mockVideo] },
+          projectId: 1,
+          projectName: 'Test',
+          shareLink: null,
+          videos: [mockVideo],
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
@@ -153,7 +155,7 @@ describe('Vizard adapter - getClips', () => {
 
     (globalThis as any).fetch = async () =>
       new Response(
-        JSON.stringify({ code: 2000, message: '', data: { projectId: 1, projectName: '', shareLink: null, videos: mockVideos } }),
+        JSON.stringify({ code: 2000, projectId: 1, projectName: '', shareLink: null, videos: mockVideos }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
 
@@ -173,7 +175,7 @@ describe('Vizard adapter - getClips', () => {
     const originalFetch = globalThis.fetch;
     (globalThis as any).fetch = async () =>
       new Response(
-        JSON.stringify({ code: 1000, message: '', data: { projectId: 1, projectName: '', shareLink: null, videos: [] } }),
+        JSON.stringify({ code: 1000, projectId: 1, projectName: '', shareLink: null, videos: [] }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
 
@@ -197,7 +199,7 @@ describe('Vizard adapter - getClipUrls', () => {
 
     (globalThis as any).fetch = async () =>
       new Response(
-        JSON.stringify({ code: 2000, message: '', data: { projectId: 1, projectName: '', shareLink: null, videos: mockVideos } }),
+        JSON.stringify({ code: 2000, projectId: 1, projectName: '', shareLink: null, videos: mockVideos }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
 

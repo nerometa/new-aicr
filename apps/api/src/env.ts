@@ -111,13 +111,13 @@ function loadEnv(): Env {
     }
   }
   // Test placeholders for Vizard + Ssemble — optional providers, safe to skip in tests
-  if ((process.env as any).VIZARD_API_KEY == null) {
+  if ((process.env as any).VIZARD_API_KEY == null || String((process.env as any).VIZARD_API_KEY).trim() === '') {
     if (process.env.NODE_ENV !== 'production') {
       // @ts-ignore
       (process.env as any).VIZARD_API_KEY = 'test-vizard-key';
     }
   }
-  if ((process.env as any).SSEMBLE_API_KEY == null) {
+  if ((process.env as any).SSEMBLE_API_KEY == null || String((process.env as any).SSEMBLE_API_KEY).trim() === '') {
     if (process.env.NODE_ENV !== 'production') {
       // @ts-ignore
       (process.env as any).SSEMBLE_API_KEY = 'test-ssemble-key';

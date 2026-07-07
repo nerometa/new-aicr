@@ -14,10 +14,10 @@ const DEFAULT_CONFIG = {
 // ─── Internal types ───────────────────────────────────────────────────────────
 
 interface VizardCreateResponse {
-  message: string;
-  data: {
-    projectId: number;
-  };
+  code: number;
+  projectId: number;
+  shareLink: string;
+  errMsg: string;
 }
 
 interface VizardVideo {
@@ -36,13 +36,10 @@ interface VizardVideo {
 
 interface VizardQueryResponse {
   code: number;
-  message: string;
-  data: {
-    projectId: number;
-    projectName: string;
-    shareLink: string | null;
-    videos: VizardVideo[];
-  };
+  projectId: number;
+  projectName: string;
+  shareLink: string | null;
+  videos: VizardVideo[];
 }
 
 // ─── Config mapping ──────────────────────────────────────────────────────────
@@ -127,7 +124,11 @@ async function createProject(
     body: JSON.stringify(body),
   });
 
-  return String(res.data.projectId);
+  if (res.code !== 2000) {
+    throw new Error(`Vizard create failed (code ${res.code}): ${res.errMsg || 'unknown error'}`);
+  }
+
+  return String(res.projectId);
 }
 
 async function getProjectStatus(
@@ -149,9 +150,9 @@ async function getClips(providerProjectId: string): Promise<ProviderClip[]> {
     `/query/${encodeURIComponent(providerProjectId)}`,
   );
 
-  if (res.code !== 2000 || !res.data?.videos?.length) return [];
+  if (res.code !== 2000 || !res.videos?.length) return [];
 
-  return [...res.data.videos]
+  return [...res.videos]
     .sort((a, b) => parseFloat(b.viralScore || '0') - parseFloat(a.viralScore || '0'))
     .map((v) => ({
       // Vizard videoId is a number — stringify for opaque providerClipId
@@ -177,9 +178,9 @@ async function getClipUrls(
   );
 
   const map = new Map<string, string>();
-  if (res.code !== 2000 || !res.data?.videos?.length) return map;
+  if (res.code !== 2000 || !res.videos?.length) return map;
 
-  for (const v of res.data.videos) {
+  for (const v of res.videos) {
     if (v.videoUrl) map.set(String(v.videoId), v.videoUrl);
   }
 
