@@ -7,7 +7,13 @@ const TIMEOUT_MS = 30_000;
 // ─── Internal types ───────────────────────────────────────────────────────────
 
 interface SsembleCreateResponse {
-  id: string;
+  data: {
+    requestId: string;
+    status: string;
+    creditsUsed: number;
+    estimatedCompletionTime: string;
+    queuePosition: number | null;
+  };
 }
 
 interface SsembleStatusResponse {
@@ -78,6 +84,8 @@ async function createProject(
 ): Promise<string> {
   const body: Record<string, unknown> = {
     url: sourceUrl,
+    start: 0,
+    end: 600,
     preferredLength: 'under30sec',
   };
 
@@ -86,7 +94,7 @@ async function createProject(
     body: JSON.stringify(body),
   });
 
-  return res.id;
+  return res.data.requestId;
 }
 
 async function getProjectStatus(
