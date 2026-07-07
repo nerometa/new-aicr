@@ -17,9 +17,11 @@ interface SsembleCreateResponse {
 }
 
 interface SsembleStatusResponse {
-  status: 'queued' | 'processing' | 'completed' | 'failed';
-  progress: number;
-  step: string;
+  data: {
+    status: 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
+    progress: number;
+    step: string;
+  };
 }
 
 interface SsembleShort {
@@ -104,9 +106,10 @@ async function getProjectStatus(
     `/shorts/${encodeURIComponent(providerProjectId)}/status`,
   );
 
-  switch (res.status) {
+  switch (res.data.status) {
     case 'completed': return 'completed';
     case 'failed': return 'failed';
+    case 'cancelled': return 'failed';
     default: return 'processing'; // queued | processing
   }
 }
