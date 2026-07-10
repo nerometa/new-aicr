@@ -133,17 +133,21 @@ export const clipsRoute = new Elysia({ prefix: '/api/clips' })
       urlExpired: c.urlExpired,
     }));
   })
-  .get('/:jobId/stream/:clipId', async ({ params, request, set }) => {
+  .get('/:jobId/stream/:clipId', async ({ params, request }) => {
     const dbUserId = await resolveUserId(request.headers);
     if (!dbUserId) {
-      set.status = 401;
-      return { error: 'Unauthorized', message: 'Authentication required' };
+      return new Response(JSON.stringify({ error: 'Unauthorized', message: 'Authentication required' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      });
     }
 
     const [job] = await db.select().from(jobs).where(eq(jobs.id, params.jobId));
     if (!job || job.userId !== dbUserId) {
-      set.status = 403;
-      return { error: 'Forbidden', message: 'You do not have access to this job' };
+      return new Response(JSON.stringify({ error: 'Forbidden', message: 'You do not have access to this job' }), {
+        status: 403,
+        headers: { 'content-type': 'application/json' },
+      });
     }
 
     const [clip] = await db
@@ -152,14 +156,18 @@ export const clipsRoute = new Elysia({ prefix: '/api/clips' })
       .where(and(eq(clips.id, params.clipId), eq(clips.jobId, params.jobId)));
 
     if (!clip) {
-      set.status = 404;
-      return { error: 'Not Found', message: 'Clip not found' };
+      return new Response(JSON.stringify({ error: 'Not Found', message: 'Clip not found' }), {
+        status: 404,
+        headers: { 'content-type': 'application/json' },
+      });
     }
 
     const videoUrl = await resolveVideoUrl(clip, job);
     if (!videoUrl) {
-      set.status = 502;
-      return { error: 'Bad Gateway', message: 'Unable to resolve clip URL' };
+      return new Response(JSON.stringify({ error: 'Bad Gateway', message: 'Unable to resolve clip URL' }), {
+        status: 502,
+        headers: { 'content-type': 'application/json' },
+      });
     }
 
     const rangeHeader = request.headers.get('range');
@@ -171,20 +179,18 @@ export const clipsRoute = new Elysia({ prefix: '/api/clips' })
     );
 
     if (!upstream.ok && upstream.status !== 206) {
-      set.status = 502;
-      return { error: 'Bad Gateway', message: 'Upstream video fetch failed' };
+      return new Response(JSON.stringify({ error: 'Bad Gateway', message: 'Upstream video fetch failed' }), {
+        status: 502,
+        headers: { 'content-type': 'application/json' },
+      });
     }
 
-    set.status = upstream.status;
-    set.headers['content-type'] =
-      upstream.headers.get('content-type') || 'video/mp4';
-    set.headers['content-disposition'] = 'inline';
-    set.headers['accept-ranges'] =
-      upstream.headers.get('accept-ranges') || 'bytes';
-    const contentLength = upstream.headers.get('content-length');
-    if (contentLength) set.headers['content-length'] = contentLength;
-    const contentRange = upstream.headers.get('content-range');
-    if (contentRange) set.headers['content-range'] = contentRange;
+    const headers = new Headers(upstream.headers);
+    headers.set('content-disposition', 'inline');
+    headers.set('accept-ranges', 'bytes');
 
-    return upstream.body;
+    return new Response(upstream.body, {
+      status: upstream.status,
+      headers,
+    });
   });
