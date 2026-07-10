@@ -1,8 +1,11 @@
 <script lang="ts">
   import type { Clip, ClipResponse } from '@aicr/shared';
+  import { API_BASE } from '$lib/api';
 
   type ClipLike = (Clip & { clipUrl?: never }) | ClipResponse;
   let { clip, onExport, exportingClipId = null }: { clip: ClipLike; onExport: (clip: ClipLike) => void; exportingClipId?: string | null } = $props();
+
+  const streamUrl = $derived(`${API_BASE}/api/clips/${clip.jobId}/stream/${clip.id}`);
 
   function downloadFile(url: string, filename: string) {
     const a = document.createElement('a');
@@ -17,7 +20,7 @@
 
 <div class="border border-[var(--border)] rounded-xl shadow-sm flex flex-col overflow-hidden">
   <a
-    href={clip.clipUrl ?? undefined}
+    href={streamUrl}
     target="_blank"
     rel="noopener noreferrer"
     class="block bg-gray-100 aspect-[9/16] flex flex-col items-center justify-center hover:bg-gray-200 transition-colors"
@@ -38,7 +41,7 @@
 
     {#if clip.clipUrl}
       <a
-        href={clip.clipUrl}
+        href={streamUrl}
         target="_blank"
         rel="noopener noreferrer"
         class="block w-full text-center text-xs bg-[var(--accent)] text-white py-2 font-bold tracking-wider rounded-md hover:bg-opacity-90 transition-colors"
