@@ -7,7 +7,7 @@ import { env } from '../../env';
 import { reapProvider } from './reap';
 import { rekaProvider } from './reka';
 
-const PROVIDERS: Record<string, ClipProvider> = {
+export const PROVIDERS: Record<string, ClipProvider> = {
   reap: reapProvider,
   reka: rekaProvider,
 };

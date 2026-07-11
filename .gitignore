@@ -51,3 +51,6 @@ drizzle/meta/
 .pi/
 active/
 docs/
+
+# EnvSitter
+.envsitter/

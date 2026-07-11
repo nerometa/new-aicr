@@ -2,33 +2,36 @@
   export let experiments: {
     id: string;
     name: string;
-    views: number;
-    engagement: number;
-    quality: number;
+    description?: string | null;
+    status: string;
+    sourceVideoUrl: string;
+    createdAt: string;
   }[] = [];
 </script>
 
-<div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
-  <table class="min-w-full divide-y divide-gray-200">
-    <thead class="bg-gray-50">
+<div class="overflow-x-auto rounded-2xl border border-[var(--border)]">
+  <table class="min-w-full divide-y divide-[var(--border)]">
+    <thead class="bg-[var(--surface)]">
       <tr>
-        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Experiment</th>
-        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Views</th>
-        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Engagement</th>
-        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Quality</th>
+        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Experiment</th>
+        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Created</th>
+        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Source Video</th>
       </tr>
     </thead>
-    <tbody class="bg-white divide-y divide-gray-200">
+    <tbody class="bg-[var(--surface-muted)] divide-y divide-[var(--border)]">
       {#each experiments as experiment}
-        <tr class="hover:bg-gray-50 transition-colors">
-          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{experiment.name}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{experiment.views.toLocaleString()}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{experiment.engagement.toFixed(1)}%</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-            <div class="flex items-center">
-              <span class="font-medium text-gray-900">{experiment.quality.toFixed(1)}</span>
-              <span class="ml-1 text-gray-400">/ 10</span>
-            </div>
+        <tr class="hover:bg-[var(--surface)] transition-colors">
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--fg)]">{experiment.name}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-[var(--muted)]">{new Date(experiment.createdAt).toLocaleDateString()}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm">
+            <a
+              href={experiment.sourceVideoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-[var(--accent)] hover:underline"
+            >
+              Watch
+            </a>
           </td>
         </tr>
       {/each}

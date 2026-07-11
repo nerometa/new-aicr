@@ -2,6 +2,8 @@
   import ExperimentSetup from '$lib/components/ExperimentSetup.svelte';
   import { API_BASE } from '$lib/api';
   import { toast } from '$lib/toast';
+  import { tierStore } from '$lib/stores/tier';
+  import ExperimentComparison from '$lib/components/ExperimentComparison.svelte';
 
   export let data;
   type ExperimentStatus = 'pending' | 'processing' | 'ready' | 'error';
@@ -222,7 +224,7 @@
                     </a>
                   </p>
                   <p class="text-xs text-[var(--muted)]">Created {formatDate(exp.createdAt)}</p>
-                  {#if exp.status === 'ready'}
+                  {#if exp.status === 'ready' && $tierStore !== 'free'}
                     <button
                       type="button"
                       on:click={() => exportCsv(exp.id, exp.name)}
@@ -243,4 +245,15 @@
         </section>
       {/each}
     </div>
+
+    {#if $tierStore === 'business' && experiments.filter(e => e.status === 'ready').length >= 2}
+      <section class="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 space-y-4">
+        <div>
+          <p class="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Business feature</p>
+          <h2 class="text-2xl font-semibold text-[var(--fg)]">Cross-experiment comparison</h2>
+          <p class="text-xs text-[var(--muted)]">Compare virality scores across completed experiments.</p>
+        </div>
+        <ExperimentComparison experiments={experiments.filter(e => e.status === 'ready')} />
+      </section>
+    {/if}
   </div>

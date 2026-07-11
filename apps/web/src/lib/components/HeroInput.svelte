@@ -2,6 +2,7 @@
   import { createJob, getProviders, ApiError } from '$lib/api';
   import { toast } from '$lib/toast';
   import { viewStore } from '$lib/stores/view';
+  import { usageStore } from '$lib/stores/tier';
   import { onMount } from 'svelte';
 
   let url = $state('');
@@ -28,13 +29,23 @@
 
   async function submit() {
     if (!url) return;
+
+    // Pre-flight quota check for Free users
+    const usage = $usageStore;
+    if (usage && usage.plan === 'free' && usage.jobsThisMonth >= usage.tierLimit) {
+      toast.error("You've used all free jobs this month. Upgrade to Pro for ฿490/mo.");
+      return;
+    }
+
     loading = true;
     try {
-      const job = await createJob(url, provider);
+      const job = await createJob(url);
       viewStore.toJob(job.id);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         viewStore.openAuthModal();
+      } else if (e instanceof ApiError && e.status === 403) {
+        toast.error("You've used all free jobs this month. Upgrade to Pro for ฿490/mo.");
       } else {
         const message = e instanceof Error ? e.message : 'Failed to start. Check your URL.';
         toast.error(message);

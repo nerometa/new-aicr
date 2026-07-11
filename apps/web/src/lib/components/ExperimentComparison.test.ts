@@ -3,21 +3,22 @@ import { describe, it, expect } from 'bun:test';
 interface Experiment {
   id: string;
   name: string;
-  views: number;
-  engagement: number;
-  quality: number;
+  description?: string | null;
+  status: string;
+  sourceVideoUrl: string;
+  createdAt: string;
 }
 
 describe('ExperimentComparison component', () => {
   describe('Table structure', () => {
     it('has correct column headers', () => {
-      const expectedHeaders = ['Experiment', 'Views', 'Engagement', 'Quality'];
-      expect(expectedHeaders.length).toBe(4);
+      const expectedHeaders = ['Experiment', 'Created', 'Source Video'];
+      expect(expectedHeaders.length).toBe(3);
     });
 
     it('renders table with proper classes', () => {
-      const tableClasses = ['overflow-x-auto', 'rounded-lg', 'border', 'shadow-sm'];
-      expect(tableClasses.length).toBe(4);
+      const tableClasses = ['overflow-x-auto', 'rounded-2xl', 'border'];
+      expect(tableClasses.length).toBe(3);
     });
   });
 
@@ -27,23 +28,23 @@ describe('ExperimentComparison component', () => {
         {
           id: 'exp-1',
           name: 'Test Experiment',
-          views: 1000,
-          engagement: 5.5,
-          quality: 8.5,
+          status: 'ready',
+          sourceVideoUrl: 'https://youtube.com/watch?v=abc123',
+          createdAt: '2025-01-15T10:30:00Z',
         },
       ];
-      
+
       expect(experiments.length).toBe(1);
       expect(experiments[0].name).toBe('Test Experiment');
     });
 
     it('renders multiple experiments', () => {
       const experiments: Experiment[] = [
-        { id: 'exp-1', name: 'Experiment 1', views: 1000, engagement: 5.5, quality: 8.5 },
-        { id: 'exp-2', name: 'Experiment 2', views: 2500, engagement: 7.2, quality: 9.0 },
-        { id: 'exp-3', name: 'Experiment 3', views: 500, engagement: 3.8, quality: 6.2 },
+        { id: 'exp-1', name: 'Experiment 1', status: 'ready', sourceVideoUrl: 'https://youtube.com/watch?v=1', createdAt: '2025-01-15T10:30:00Z' },
+        { id: 'exp-2', name: 'Experiment 2', status: 'ready', sourceVideoUrl: 'https://youtube.com/watch?v=2', createdAt: '2025-02-20T14:00:00Z' },
+        { id: 'exp-3', name: 'Experiment 3', status: 'ready', sourceVideoUrl: 'https://youtube.com/watch?v=3', createdAt: '2025-03-10T08:15:00Z' },
       ];
-      
+
       expect(experiments.length).toBe(3);
     });
 
@@ -51,40 +52,50 @@ describe('ExperimentComparison component', () => {
       const experiments: Experiment[] = [];
       expect(experiments.length).toBe(0);
     });
+
+    it('handles optional description field', () => {
+      const withDescription: Experiment = {
+        id: 'exp-1',
+        name: 'With Description',
+        description: 'A test experiment',
+        status: 'ready',
+        sourceVideoUrl: 'https://youtube.com/watch?v=abc',
+        createdAt: '2025-01-15T10:30:00Z',
+      };
+      const withoutDescription: Experiment = {
+        id: 'exp-2',
+        name: 'Without Description',
+        status: 'ready',
+        sourceVideoUrl: 'https://youtube.com/watch?v=def',
+        createdAt: '2025-01-15T10:30:00Z',
+      };
+
+      expect(withDescription.description).toBe('A test experiment');
+      expect(withoutDescription.description).toBeUndefined();
+    });
   });
 
   describe('Data formatting', () => {
-    it('formats views with toLocaleString', () => {
-      const views = 15000;
-      const formatted = views.toLocaleString();
-      expect(formatted).toBe('15,000');
+    it('formats createdAt as locale date string', () => {
+      const createdAt = '2025-01-15T10:30:00Z';
+      const formatted = new Date(createdAt).toLocaleDateString();
+      expect(typeof formatted).toBe('string');
+      expect(formatted.length).toBeGreaterThan(0);
     });
 
-    it('formats engagement as percentage with one decimal', () => {
-      const engagement = 5.567;
-      const formatted = engagement.toFixed(1) + '%';
-      expect(formatted).toBe('5.6%');
-    });
-
-    it('formats quality with one decimal', () => {
-      const quality = 8.75;
-      const formatted = quality.toFixed(1);
-      expect(formatted).toBe('8.8');
+    it('produces valid date from createdAt', () => {
+      const createdAt = '2025-06-01T12:00:00Z';
+      const date = new Date(createdAt);
+      expect(date.getFullYear()).toBe(2025);
+      expect(date.getMonth()).toBe(5);
+      expect(date.getDate()).toBe(1);
     });
   });
 
-  describe('Quality display', () => {
-    it('shows quality out of 10', () => {
-      const quality = 8.5;
-      const maxQuality = 10;
-      expect(quality).toBeLessThanOrEqual(maxQuality);
-    });
-
-    it('displays quality with proper precision', () => {
-      const qualityScores = [8.123, 9.456, 7.789];
-      const formatted = qualityScores.map(q => q.toFixed(1));
-      
-      expect(formatted).toEqual(['8.1', '9.5', '7.8']);
+  describe('Source video link', () => {
+    it('stores sourceVideoUrl as a valid URL', () => {
+      const url = 'https://youtube.com/watch?v=abc123';
+      expect(url).toMatch(/^https?:\/\//);
     });
   });
 
@@ -102,7 +113,7 @@ describe('ExperimentComparison component', () => {
 
   describe('Hover interaction', () => {
     it('applies hover effect on rows', () => {
-      const hoverClass = 'hover:bg-gray-50';
+      const hoverClass = 'hover:bg-[var(--surface)]';
       expect(hoverClass).toContain('hover:');
     });
   });

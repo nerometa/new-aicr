@@ -1,6 +1,7 @@
 <script lang="ts">
   import { API_BASE, getProviders } from '$lib/api';
   import { toast } from '$lib/toast';
+  import { tierStore } from '$lib/stores/tier';
   import { createEventDispatcher, onMount } from 'svelte';
 
   // emojis removed — Reap-only internal config, not in shared ClipConfig
@@ -32,7 +33,14 @@
     configs = configs.map((cfg, i) => i === index ? { ...cfg, [key]: value } : cfg);
   };
 
-  const addConfig = () => { configs = [...configs, defaultConfig()]; };
+  const addConfig = () => {
+    if ($tierStore === 'free') return;
+    if ($tierStore === 'pro' && configs.length >= 3) {
+      toast.info('Upgrade to Business for unlimited variants.');
+      return;
+    }
+    configs = [...configs, defaultConfig()];
+  };
   const removeConfig = (index: number) => {
     if (configs.length === 1) return;
     configs = configs.filter((_, i) => i !== index);
@@ -192,8 +200,10 @@
               on:change={(e) => setConfigValue(index, 'clipDuration', Number(e.currentTarget.value) as 30 | 60 | 90)}
             >
               <option value={30}>30s (short)</option>
-              <option value={60}>60s (medium)</option>
-              <option value={90}>90s (long)</option>
+              {#if $tierStore !== 'free'}
+                <option value={60}>60s (medium)</option>
+                <option value={90}>90s (long)</option>
+              {/if}
             </select>
           </label>
           <label class="space-y-2 text-xs font-semibold text-[var(--fg)]">
@@ -204,8 +214,10 @@
               on:change={(e) => setConfigValue(index, 'orientation', e.currentTarget.value as 'portrait' | 'landscape' | 'square')}
             >
               <option value="portrait">Portrait 9:16</option>
-              <option value="landscape">Landscape 16:9</option>
-              <option value="square">Square 1:1</option>
+              {#if $tierStore !== 'free'}
+                <option value="landscape">Landscape 16:9</option>
+                <option value="square">Square 1:1</option>
+              {/if}
             </select>
           </label>
         </div>
@@ -227,13 +239,19 @@
   </div>
 
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-    <button
-      type="button"
-      class="inline-flex items-center justify-center rounded-2xl border border-dashed border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--fg)] transition-colors duration-150 hover:bg-[var(--surface-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]/30"
-      on:click={addConfig}
-    >
-      + Add variant
-    </button>
+    {#if $tierStore !== 'free'}
+      <button
+        type="button"
+        class="inline-flex items-center justify-center rounded-2xl border border-dashed border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--fg)] transition-colors duration-150 hover:bg-[var(--surface-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]/30 disabled:opacity-40 disabled:cursor-not-allowed"
+        on:click={addConfig}
+        disabled={$tierStore === 'pro' && configs.length >= 3}
+      >
+        + Add variant
+      </button>
+      {#if $tierStore === 'pro' && configs.length >= 3}
+        <p class="text-xs text-[var(--muted)]">Upgrade to Business for unlimited variants.</p>
+      {/if}
+    {/if}
     <p class="text-xs text-[var(--muted)]">Variants power multi-configuration clipping jobs.</p>
   </div>
 

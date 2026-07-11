@@ -59,3 +59,24 @@ export interface SSEResponse {
   status: JobStatus;
   jobId: string;
 }
+
+export type PlanName = 'free' | 'pro' | 'business';
+
+export interface UsageResponse {
+  plan: PlanName;
+  jobsThisMonth: number;
+  tierLimit: number;
+  overageCount: number;
+  overageRate: number;
+  estimatedTotal: number;
+  resetDate: string;
+  recentJobs: { id: string; provider: string; createdAt: string; status: string }[];
+}
+
+export interface TierUpdateRequest {
+  plan: PlanName;
+}
+
+export interface TierUpdateResponse {
+  plan: PlanName;
+}

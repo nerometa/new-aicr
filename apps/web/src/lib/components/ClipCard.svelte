@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Clip, ClipResponse } from '@aicr/shared';
   import { API_BASE } from '$lib/api';
+  import { tierStore } from '../stores/tier';
 
   type ClipLike = (Clip & { clipUrl?: never }) | ClipResponse;
   let { clip, onExport, exportingClipId = null }: { clip: ClipLike; onExport: (clip: ClipLike) => void; exportingClipId?: string | null } = $props();
@@ -40,15 +41,24 @@
     {/if}
 
     {#if clip.clipUrl}
-      <a
-        href={streamUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        class="block w-full text-center text-xs bg-[var(--accent)] text-white py-2 font-bold tracking-wider rounded-md hover:bg-opacity-90 transition-colors"
-        download
-      >
-        DOWNLOAD
-      </a>
+      {#if $tierStore === 'free'}
+        <a
+          href="/pricing"
+          class="block w-full text-center text-xs bg-[var(--accent)] text-white py-2 font-bold tracking-wider rounded-md hover:bg-opacity-90 transition-colors"
+        >
+          UPGRADE TO DOWNLOAD
+        </a>
+      {:else}
+        <a
+          href={streamUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="block w-full text-center text-xs bg-[var(--accent)] text-white py-2 font-bold tracking-wider rounded-md hover:bg-opacity-90 transition-colors"
+          download
+        >
+          DOWNLOAD
+        </a>
+      {/if}
     {:else if exportingClipId === clip.id}
       <p class="text-xs text-center text-[var(--muted)] animate-pulse py-2">Loading...</p>
     {:else}

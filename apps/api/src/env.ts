@@ -50,6 +50,11 @@ const envSchema = z.object({
   SSEMBLE_API_KEY: z.string().min(1).optional(),
 
   // ============================================
+  // YouTube Data API v3 (optional — used for smart routing by video duration)
+  // ============================================
+  YOUTUBE_API_KEY: z.string().min(1).optional(),
+
+  // ============================================
   // Google OAuth (social login via Better Auth)
   // ============================================
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
@@ -121,6 +126,11 @@ function loadEnv(): Env {
     if (process.env.NODE_ENV !== 'production') {
       // @ts-ignore
       (process.env as any).SSEMBLE_API_KEY = 'test-ssemble-key';
+    }
+  }
+  if ((process.env as any).YOUTUBE_API_KEY == null) {
+    if (process.env.NODE_ENV !== 'production') {
+      (process.env as any).YOUTUBE_API_KEY = 'test-youtube-key';
     }
   }
   const result = envSchema.safeParse(process.env);

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Header from '$lib/components/Header.svelte';
   import HeroInput from '$lib/components/HeroInput.svelte';
   import JobDetail from '$lib/components/JobDetail.svelte';
   import JobsList from '$lib/components/JobsList.svelte';
@@ -11,8 +10,6 @@
 <svelte:head>
   <title>AI Content Repurposer</title>
 </svelte:head>
-
-<Header />
 
 <main class="max-w-3xl mx-auto pt-8 sm:pt-24 px-3 sm:px-4">
   {#if $viewStore.current === 'landing'}

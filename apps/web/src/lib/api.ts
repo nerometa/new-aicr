@@ -5,7 +5,7 @@
  * - Example: https://api.aicr.example.com or http://localhost:3000
  * - Must be set at build time (baked into the bundle)
  */
-import type { Job, ClipResponse, JobResponse, CreateJobRequest } from '@aicr/shared';
+import type { Job, ClipResponse, JobResponse, CreateJobRequest, UsageResponse, TierUpdateResponse, PlanName } from '@aicr/shared';
 
 // API base URL - VITE_API_URL must be set at build time
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -46,13 +46,12 @@ export const getProviders = () =>
   apiFetch<{ providers: string[] }>('/api/providers');
 
 // Jobs
-export const createJob = (youtubeUrl: string, provider: string = 'reap') =>
-  apiFetch<JobResponse>('/api/jobs', {
+export async function createJob(youtubeUrl: string): Promise<JobResponse> {
+  return apiFetch<JobResponse>('/api/jobs', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ youtubeUrl, provider }),
-    credentials: 'include',
+    body: JSON.stringify({ youtubeUrl }),
   });
+}
 
 export const getJob = (id: string) =>
   apiFetch<Job>(`/api/jobs/${id}`);
@@ -63,5 +62,16 @@ export const getJobs = () =>
 // Clips
 export const getClips = (jobId: string) =>
   apiFetch<ClipResponse[]>(`/api/clips/${jobId}`);
+
+export async function getUsage(): Promise<UsageResponse> {
+  return apiFetch<UsageResponse>('/api/user/usage');
+}
+
+export async function updateTier(plan: PlanName): Promise<TierUpdateResponse> {
+  return apiFetch<TierUpdateResponse>('/api/user/tier', {
+    method: 'PATCH',
+    body: JSON.stringify({ plan }),
+  });
+}
 
 // Export flow removed — Reap provides clipUrl directly. No separate export step.

@@ -9,6 +9,11 @@ import { randomUUID } from 'crypto';
 import { redis } from '../lib/redis';
 import { sanitizeYouTubeUrl } from '../lib/youtube';
 import { env } from '../env';
+import { getTierConfig } from '../services/tier';
+import { getMonthlyJobCount } from '../services/quota';
+import { getProviderForVideo } from '../services/smart-routing';
+import { extractVideoId } from '../lib/youtube';
+import { getVideoDurationSeconds } from '../lib/youtube-duration';
 
 // Constants
 const RATE_LIMIT_JOBS_PER_HOUR = 10;
@@ -53,14 +58,14 @@ function pickRateLimitBucket(headers: Headers, userId: string | null): [string, 
   return ['anon:global', RATE_LIMIT_ANON_GLOBAL_PER_HOUR];
 }
 
-async function resolveUserId(headers: Headers): Promise<string | null> {
+async function resolveUserId(headers: Headers): Promise<{ id: string; plan: string } | null> {
   try {
     const api: any = (auth as any).api;
     if (!api || typeof api.getSession !== 'function') return null;
     const session: any = await api.getSession({ headers: headers as any });
     if (!session?.user?.id) return null;
     const [found] = await db.select().from(user).where(eq(user.id, session.user.id));
-    return found?.id ?? null;
+    return found ? { id: found.id, plan: found.plan } : null;
   } catch {
     return null;
   }
@@ -69,19 +74,31 @@ async function resolveUserId(headers: Headers): Promise<string | null> {
 export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
   .post('/', async ({ body, set, request }) => {
     // Resolve user first → enables per-user bucket (immune to header spoofing).
-    const dbUserId = await resolveUserId(request.headers);
+    const dbUser = await resolveUserId(request.headers);
 
-    if (!dbUserId) {
+    if (!dbUser) {
       set.status = 401;
       return { error: 'Unauthorized', message: 'Authentication required to create jobs' };
     }
 
-    const [bucket, limit] = pickRateLimitBucket(request.headers, dbUserId);
+    const [bucket, limit] = pickRateLimitBucket(request.headers, dbUser.id);
     if (await isRateLimited(bucket, limit)) {
       set.status = 429;
       return {
         error: 'Rate limit exceeded',
         message: `Maximum ${limit} jobs per hour allowed.`,
+      };
+    }
+
+    // Tier enforcement — quota check
+    const tierConfig = getTierConfig(dbUser.plan);
+    const jobCount = await getMonthlyJobCount(dbUser.id);
+    if (jobCount >= tierConfig.jobsPerMonth && dbUser.plan === 'free') {
+      set.status = 403;
+      return {
+        error: 'Quota exceeded',
+        message: `You've used all ${tierConfig.jobsPerMonth} free jobs this month. Upgrade to Pro for ฿490/mo.`,
+        upgradeRequired: true,
       };
     }
 
@@ -91,7 +108,26 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       return { error: 'Invalid URL', message: 'Please provide a valid YouTube URL' };
     }
 
-    const providerName = body.provider ?? 'reap';
+    // Smart routing: fetch video duration and auto-select provider
+    const videoId = extractVideoId(body.youtubeUrl);
+    let providerName: string;
+
+    if (videoId) {
+      const durationSeconds = await getVideoDurationSeconds(videoId);
+
+      // Max video length validation
+      if (durationSeconds !== null && durationSeconds > tierConfig.maxVideoMinutes * 60) {
+        set.status = 403;
+        return {
+          error: 'Video too long',
+          message: `Your plan supports videos up to ${tierConfig.maxVideoMinutes} minutes. Upgrade for longer videos.`,
+        };
+      }
+
+      providerName = await getProviderForVideo(videoId);
+    } else {
+      providerName = 'reap';
+    }
 
     // Validate against registry — fast-fail before any provider call
     if (!PROVIDER_NAMES.includes(providerName as any)) {
@@ -99,6 +135,22 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       return {
         error: 'Invalid provider',
         message: `Unknown provider "${providerName}". Valid options: ${PROVIDER_NAMES.join(', ')}`,
+      };
+    }
+
+    // ClipConfig validation
+    if (body.clipDuration !== undefined && !(tierConfig.features.durations as number[]).includes(body.clipDuration)) {
+      set.status = 400;
+      return {
+        error: 'Invalid configuration',
+        message: `Your plan supports clip durations: ${tierConfig.features.durations.join(', ')} seconds`,
+      };
+    }
+    if (body.orientation !== undefined && !(tierConfig.features.orientations as string[]).includes(body.orientation)) {
+      set.status = 400;
+      return {
+        error: 'Invalid configuration',
+        message: `Your plan supports orientations: ${tierConfig.features.orientations.join(', ')}`,
       };
     }
 
@@ -110,7 +162,7 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
 
       await db.insert(jobs).values({
         id: jobId,
-        userId: dbUserId,
+        userId: dbUser.id,
         youtubeUrl: sanitizedUrl,
         provider: providerName,
         providerProjectId,
@@ -137,12 +189,14 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
     body: t.Object({
       youtubeUrl: t.String(),
       provider: t.Optional(t.String()),
+      clipDuration: t.Optional(t.Union([t.Literal(30), t.Literal(60), t.Literal(90)])),
+      orientation: t.Optional(t.Union([t.Literal('portrait'), t.Literal('landscape'), t.Literal('square')])),
     }),
   })
 
   .get('/:id', async ({ params, request, set }) => {
-    const dbUserId = await resolveUserId(request.headers);
-    if (!dbUserId) {
+    const dbUser = await resolveUserId(request.headers);
+    if (!dbUser) {
       set.status = 401;
       return { error: 'Unauthorized', message: 'Authentication required' };
     }
@@ -151,7 +205,7 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       set.status = 404;
       return { error: 'Job not found' };
     }
-    if (job.userId !== dbUserId) {
+    if (job.userId !== dbUser.id) {
       set.status = 403;
       return { error: 'Forbidden', message: 'You do not have access to this job' };
     }
@@ -167,12 +221,12 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
   })
 
   .get('/', async ({ request, set }) => {
-    const dbUserId = await resolveUserId(request.headers);
-    if (!dbUserId) {
+    const dbUser = await resolveUserId(request.headers);
+    if (!dbUser) {
       set.status = 401;
       return { error: 'Unauthorized', message: 'Authentication required to view jobs' };
     }
-    const userJobs = await db.select().from(jobs).where(eq(jobs.userId, dbUserId));
+    const userJobs = await db.select().from(jobs).where(eq(jobs.userId, dbUser.id));
     return userJobs.map(j => ({
       id: j.id,
       status: j.status,
@@ -183,10 +237,10 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
     }));
   })
 
-  .get('/sse/:jobId', async ({ params, request, set, signal }) => {
+  .get('/sse/:jobId', async ({ params, request, set, signal }: { params: { jobId: string }; request: Request; set: any; signal?: AbortSignal }) => {
     // Auth + ownership check BEFORE opening stream
-    const dbUserId = await resolveUserId(request.headers);
-    if (!dbUserId) {
+    const dbUser = await resolveUserId(request.headers);
+    if (!dbUser) {
       set.status = 401;
       return { error: 'Unauthorized', message: 'Authentication required' };
     }
@@ -195,7 +249,7 @@ export const jobsRoute = new Elysia({ prefix: '/api/jobs' })
       set.status = 404;
       return { error: 'Job not found' };
     }
-    if (ownedJob.userId !== dbUserId) {
+    if (ownedJob.userId !== dbUser.id) {
       set.status = 403;
       return { error: 'Forbidden', message: 'You do not have access to this job' };
     }
