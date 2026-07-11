@@ -27,7 +27,7 @@
 </script>
 
 <header class="border-b border-[var(--border)] px-4 sm:px-8 py-3 sm:py-4 flex justify-between items-center">
-  <div class="flex gap-2">
+  <div class="flex gap-4 items-center">
     <a href="/" class="font-['Plus_Jakarta_Sans'] text-xl sm:text-2xl font-black tracking-tight transition-colors">
       AICR
     </a>
