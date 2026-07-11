@@ -27,15 +27,17 @@
 </script>
 
 <header class="border-b border-[var(--border)] px-4 sm:px-8 py-3 sm:py-4 flex justify-between items-center">
-  <a href="/" class="font-['Plus_Jakarta_Sans'] text-xl sm:text-2xl font-black tracking-tight transition-colors">
-    AICR
-  </a>
-  <nav class="flex gap-4 text-sm">
-    <a href="/pricing" class="text-[var(--muted)] hover:text-[var(--fg)] transition-colors">Pricing</a>
-    {#if $session.data?.user}
-      <a href="/usage" class="text-[var(--muted)] hover:text-[var(--fg)] transition-colors">Usage</a>
-    {/if}
-  </nav>
+  <div class="flex gap-2">
+    <a href="/" class="font-['Plus_Jakarta_Sans'] text-xl sm:text-2xl font-black tracking-tight transition-colors">
+      AICR
+    </a>
+    <nav class="flex gap-4 text-sm">
+      <a href="/pricing" class="text-[var(--muted)] hover:text-[var(--fg)] transition-colors">Pricing</a>
+      {#if $session.data?.user}
+        <a href="/usage" class="text-[var(--muted)] hover:text-[var(--fg)] transition-colors">Usage</a>
+      {/if}
+    </nav>
+  </div>
   <div class="flex gap-2 sm:gap-4 items-center">
     <button onclick={toggleTheme} class="text-sm">
       {isDark ? '☀️' : '🌙'}
