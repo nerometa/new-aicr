@@ -3,6 +3,7 @@
   import { viewStore } from '$lib/stores/view';
   import { useSession } from '$lib/auth-client';
   import AuthModal from '$lib/components/AuthModal.svelte';
+  import CheckoutModal from '$lib/components/CheckoutModal.svelte';
   import type { PlanName } from '@aicr/shared';
 
   const session = useSession();
@@ -235,31 +236,11 @@
 {/if}
 
 {#if checkoutTier}
-  <!-- CheckoutModal is being created in parallel — will exist by runtime -->
-  {#if typeof window !== 'undefined'}
-    {@const CheckoutModal = null}
-    <!-- 
-      Integration point: when CheckoutModal.svelte is available,
-      import it at the top and render here:
-      <CheckoutModal tier={checkoutTier} onClose={() => checkoutTier = null} />
-    -->
-    <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onclick={() => checkoutTier = null}>
-      <div class="bg-[var(--bg)] rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-sm" onclick={(e) => e.stopPropagation()}>
-        <h2 class="font-['Barlow_Condensed'] text-2xl font-bold mb-2">
-          Upgrade to {checkoutTier === 'pro' ? 'Pro' : 'Business'}
-        </h2>
-        <p class="text-[var(--muted)] text-sm mb-6">
-          Checkout is being set up. You'll be redirected to complete your subscription.
-        </p>
-        <button
-          onclick={() => checkoutTier = null}
-          class="w-full py-3 px-4 text-sm font-semibold rounded-[var(--radius-button)] border border-[var(--border)] text-[var(--fg)] hover:border-[var(--fg)] transition-colors"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  {/if}
+  <CheckoutModal
+    plan={checkoutTier}
+    price={checkoutTier === 'pro' ? 490 : 1590}
+    onclose={() => checkoutTier = null}
+  />
 {/if}
 
 <style>
