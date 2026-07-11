@@ -4,13 +4,13 @@
   import { toast } from '$lib/toast';
   import ToastContainer from '$lib/toast/ToastContainer.svelte';
   import Header from '$lib/components/Header.svelte';
-  import { onMount } from 'svelte';
   import { fetchUsage } from '$lib/stores/tier';
 
   let { children } = $props();
   const session = useSession();
 
-  onMount(() => {
+  // Reactive: fetch usage whenever session resolves to an authenticated user
+  $effect(() => {
     if ($session.data?.user) {
       fetchUsage();
     }

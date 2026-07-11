@@ -1,6 +1,6 @@
 <script lang="ts">
   import { useSession } from '$lib/auth-client';
-  import { usageStore, tierStore } from '$lib/stores/tier';
+  import { usageStore, tierStore, fetchUsage } from '$lib/stores/tier';
   import CheckoutModal from '$lib/components/CheckoutModal.svelte';
   import type { PlanName } from '@aicr/shared';
 
@@ -11,6 +11,13 @@
 
   const isAuthenticated = $derived(!!$session.data?.user);
   const usage = $derived($usageStore);
+
+  // Fetch usage when page loads (in case layout didn't or session just resolved)
+  $effect(() => {
+    if (isAuthenticated) {
+      fetchUsage();
+    }
+  });
 
   const planLabel = $derived(
     usage ? usage.plan.charAt(0).toUpperCase() + usage.plan.slice(1) : '',
