@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import type { PlanName, UsageResponse } from '@aicr/shared';
-import { getUsage } from '../api';
+import { getUsage, updateTier as apiUpdateTier } from '../api';
 
 export const tierStore = writable<PlanName>('free');
 export const usageStore = writable<UsageResponse | null>(null);
@@ -16,6 +16,7 @@ export async function fetchUsage(): Promise<void> {
 }
 
 export async function updateTier(plan: PlanName): Promise<void> {
+  await apiUpdateTier(plan);
   tierStore.set(plan);
   await fetchUsage();
 }
