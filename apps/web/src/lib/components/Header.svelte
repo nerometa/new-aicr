@@ -27,9 +27,9 @@
 </script>
 
 <header class="border-b border-[var(--border)] px-4 sm:px-8 py-3 sm:py-4 flex justify-between items-center">
-  <button onclick={() => viewStore.toLanding()} class="font-['Plus_Jakarta_Sans'] text-xl sm:text-2xl font-black tracking-tight transition-colors">
+  <a href="/" class="font-['Plus_Jakarta_Sans'] text-xl sm:text-2xl font-black tracking-tight transition-colors">
     AICR
-  </button>
+  </a>
   <nav class="flex gap-4 text-sm">
     <a href="/pricing" class="text-[var(--muted)] hover:text-[var(--fg)] transition-colors">Pricing</a>
     {#if $session.data?.user}
