@@ -8,10 +8,7 @@ export const TIERS = {
       download: false,
       durations: [30],
       orientations: ['portrait'],
-      experiments: false,
-      maxVariants: 0,
       csvExport: false,
-      comparison: false,
       priorityQueue: false,
     },
   },
@@ -24,10 +21,7 @@ export const TIERS = {
       download: true,
       durations: [30, 60, 90],
       orientations: ['portrait', 'landscape', 'square'],
-      experiments: true,
-      maxVariants: 3,
       csvExport: true,
-      comparison: false,
       priorityQueue: true,
     },
   },
@@ -40,10 +34,7 @@ export const TIERS = {
       download: true,
       durations: [30, 60, 90],
       orientations: ['portrait', 'landscape', 'square'],
-      experiments: true,
-      maxVariants: Infinity,
       csvExport: true,
-      comparison: true,
       priorityQueue: true,
     },
   },
@@ -60,10 +51,7 @@ type TierConfig = {
     download: boolean;
     durations: readonly number[];
     orientations: readonly string[];
-    experiments: boolean;
-    maxVariants: number;
     csvExport: boolean;
-    comparison: boolean;
     priorityQueue: boolean;
   };
 };

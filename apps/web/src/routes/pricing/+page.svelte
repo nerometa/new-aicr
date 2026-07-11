@@ -63,9 +63,7 @@
     { name: 'Clip duration', free: '30s only', pro: '30/60/90s', business: '30/60/90s' },
     { name: 'Orientation', free: 'Portrait only', pro: 'All', business: 'All' },
     { name: 'Captions', free: true, pro: true, business: true },
-    { name: 'Experiments', free: false, pro: '3 variants', business: '∞ variants' },
     { name: 'CSV export', free: false, pro: true, business: true },
-    { name: 'Cross-experiment comparison', free: false, pro: false, business: true },
     { name: 'Priority queue', free: false, pro: true, business: true },
   ];
 
@@ -167,28 +165,16 @@
             <span class="text-[var(--accent)] mt-px">✓</span>
             <span>Virality scoring</span>
           </li>
-          {#if tier.id === 'pro'}
+          {#if tier.id !== 'free'}
             <li class="flex items-start gap-2 text-sm">
               <span class="text-[var(--accent)] mt-px">✓</span>
               <span>Clip downloads</span>
-            </li>
-            <li class="flex items-start gap-2 text-sm">
-              <span class="text-[var(--accent)] mt-px">✓</span>
-              <span>Up to 3 experiments</span>
             </li>
           {/if}
           {#if tier.id === 'business'}
             <li class="flex items-start gap-2 text-sm">
               <span class="text-[var(--accent)] mt-px">✓</span>
-              <span>Clip downloads</span>
-            </li>
-            <li class="flex items-start gap-2 text-sm">
-              <span class="text-[var(--accent)] mt-px">✓</span>
-              <span>Unlimited experiments</span>
-            </li>
-            <li class="flex items-start gap-2 text-sm">
-              <span class="text-[var(--accent)] mt-px">✓</span>
-              <span>Cross-experiment comparison</span>
+              <span>Priority queue</span>
             </li>
           {/if}
         </ul>
